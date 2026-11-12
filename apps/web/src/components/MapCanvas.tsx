@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import AppSelect from "./AppSelect";
 import { GLYPH_BY_ID, GLYPH_LIBRARY, defaultGlyphOf, defaultIcon, drawGlyphDot, drawPinIcon, iconId, resolveGlyph, resolveShape } from "./mapIcons";
-import maplibregl, { LngLatBounds, Map as MapLibreMap } from "maplibre-gl";
+// MapLibre 6 起只发布 ESM，且不再提供默认导出；统一用命名空间导入
+import * as maplibregl from "maplibre-gl";
+import { LngLatBounds, type Map as MapLibreMap } from "maplibre-gl";
 import { Input } from "antd";
 import HoverTip from "./HoverTip";
 import LayerPanel, { categoryLabelOf } from "./LayerPanel";
@@ -286,6 +288,8 @@ export default function MapCanvas({
   const lineWidth = useMapLineStyle((state) => state.lineWidth);
   const setLineStyle = useMapLineStyle((state) => state.setLineStyle);
   const [status, setStatus] = useState({ lon: 115.9, lat: 28.68, zoom: 10, mpp: 0 });
+  // MapLibre 6 要求 WebGL2；初始化失败时在画布位置给出明确提示，而不是留一块空白
+  const [mapError, setMapError] = useState<string | null>(null);
   const [bearing, setBearing] = useState(0);
   const [pitch, setPitch] = useState(0);
   const [layersOpen, setLayersOpen] = useState(false);
@@ -360,17 +364,25 @@ export default function MapCanvas({
   useEffect(() => {
     if (!containerRef.current) return;
     tileErrorCount.current = 0;
+    setMapError(null);
     const camera = cameraRef.current;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: styleFor(basemap, useThemeStore.getState().resolved === "dark"),
-      center: camera?.center ?? [115.9, 28.68],
-      zoom: camera?.zoom ?? 10,
-      bearing: camera?.bearing ?? 0,
-      pitch: camera?.pitch ?? 0,
-      attributionControl: false,
-      dragPan: false,
-    });
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: containerRef.current,
+        style: styleFor(basemap, useThemeStore.getState().resolved === "dark"),
+        center: camera?.center ?? [115.9, 28.68],
+        zoom: camera?.zoom ?? 10,
+        bearing: camera?.bearing ?? 0,
+        pitch: camera?.pitch ?? 0,
+        attributionControl: false,
+        dragPan: false,
+      });
+    } catch (error) {
+      // MapLibre 6 在无法创建 WebGL2 上下文时从构造函数抛出 GPUInitializationError
+      setMapError(error instanceof Error ? error.message : "地图初始化失败");
+      return;
+    }
     mapRef.current = map;
     // 构造参数里的 dragPan:false 不可靠，这里显式关掉左键平移
     map.dragPan.disable();
@@ -986,8 +998,8 @@ export default function MapCanvas({
       if (map.getLayer("sketch-lines")) {
         map.setPaintProperty("sketch-lines", "line-color", lineColor);
         map.setPaintProperty("sketch-lines", "line-width", lineWidth);
-        // 传 null 会把 dasharray 复位成样式默认值，即实线；不需要删图层重建
-        map.setPaintProperty("sketch-lines", "line-dasharray", dashArray);
+        // MapLibre 6 的类型不再接受 null；undefined 在运行时同样表示“复位成样式默认值”
+        map.setPaintProperty("sketch-lines", "line-dasharray", dashArray ?? undefined);
         map.setLayoutProperty("sketch-lines", "visibility", lineVisible ? "visible" : "none");
       }
       ensureSource("real-routes", realRoutes, {
@@ -1316,6 +1328,14 @@ export default function MapCanvas({
   return (
     <div className="map-wrap">
       <div className="map" ref={containerRef} />
+      {mapError ? (
+        <div className="map-fallback" role="alert">
+          <b>地图无法初始化</b>
+          <span>当前浏览器没有可用的 WebGL2 上下文，地图引擎无法启动。</span>
+          <span>请更新浏览器或显卡驱动后重试；日程、时间线和攻略仍可正常使用。</span>
+          <code>{mapError}</code>
+        </div>
+      ) : null}
 
       <div className="map-tools" ref={toolsRef}>
         <div className="map-tool-group">
