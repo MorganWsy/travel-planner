@@ -14,7 +14,14 @@ const shared: ThemeConfig = {
   components: {
     Card: { paddingLG: 12 },
     Tabs: { horizontalItemPadding: "7px 12px", horizontalMargin: "0" },
-    Table: { cellPaddingBlockSM: 6, headerBorderRadius: 4 },
+    // Antd 6 的 Table 字号由 cellFontSize 系列 token 控制，CSS 覆盖会被 :where 规则和变量重定义绕开
+    Table: {
+      cellPaddingBlockSM: 6,
+      headerBorderRadius: 4,
+      cellFontSize: 13,
+      cellFontSizeMD: 13,
+      cellFontSizeSM: 13,
+    },
     Modal: { titleFontSize: 16 },
     Message: { contentPadding: "9px 14px" },
     Notification: { width: 340 },

@@ -114,9 +114,12 @@ a {
    Popconfirm 复用同一套 DOM，会一起适配。 */
 /* 选择器前面带 html，是为了稳压 Antd 运行时注入的 :where(...) 规则（同权重时后注入者胜） */
 html .ant-tooltip {
+  /* Antd 6 的箭头颜色变量改名，同时保留旧变量兼容历史样式 */
   --antd-arrow-background-color: var(--tooltip-bg);
+  --ant-tooltip-arrow-background-color: var(--tooltip-bg);
 }
-html .ant-tooltip .ant-tooltip-inner {
+/* Antd 6 把气泡内容从 .ant-tooltip-inner 改为 .ant-tooltip-container */
+html .ant-tooltip .ant-tooltip-container {
   background: var(--tooltip-bg);
   color: var(--tooltip-text);
   border: 1px solid var(--line);
@@ -126,15 +129,15 @@ html .ant-tooltip .ant-tooltip-inner {
   line-height: 1.5;
   padding: 5px 8px;
 }
-html .ant-tooltip .ant-tooltip-arrow::before,
-html .ant-tooltip .ant-tooltip-arrow::after {
+/* Antd 6 的箭头改由 .ant-tooltip-arrow-content 绘制，不再用 ::before/::after */
+html .ant-tooltip .ant-tooltip-arrow-content {
   background: var(--tooltip-bg);
 }
 
 /* Antd 浮层默认留白偏大，统一收紧；html 前缀用于压过运行时注入的同权重规则 */
-/* antd 5 的 Modal 把 padding 放在 .ant-modal-content 上，header/body/footer 自身没有内边距；
-   只改三者等于没改，必须落到 content 才真的收紧 */
-html .ant-modal .ant-modal-content {
+/* antd 6 把 padding 放在 .ant-modal-container 上，header/body/footer 自身没有内边距；
+   只改三者等于没改，必须落到 container 才真的收紧 */
+html .ant-modal .ant-modal-container {
   padding: 10px 12px !important;
 }
 /* 所有弹窗的标题下方统一一根分隔线，和左右栏标题保持同一套视觉 */
@@ -200,7 +203,7 @@ html .ant-notification .ant-notification-notice {
   padding: 10px 12px !important;
   border-radius: 8px;
 }
-html .ant-notification .ant-notification-notice-message {
+html .ant-notification .ant-notification-notice-title {
   font-size: var(--fs-14);
   margin-bottom: 2px;
   padding-right: 16px;
@@ -209,10 +212,7 @@ html .ant-notification .ant-notification-notice-description {
   font-size: var(--fs-13);
   line-height: 1.55;
 }
-html .ant-notification .ant-notification-notice-with-icon .ant-notification-notice-message,
-html .ant-notification .ant-notification-notice-with-icon .ant-notification-notice-description {
-  margin-inline-start: 26px;
-}
+/* Antd 6 的图标间距由内部 wrapper 负责，v5 的 .ant-notification-notice-with-icon 类已不再输出 */
 html .ant-notification .ant-notification-notice-icon {
   font-size: 18px;
   margin-top: 1px;
@@ -229,14 +229,14 @@ html .ant-notification .ant-notification-notice-close {
   justify-content: center;
   margin: 0;
 }
-html .ant-message .ant-message-notice-content {
+/* Antd 6 把 message 的背景、内边距移到 .ant-message-notice 本身，
+   原来的 .ant-message-notice-content 已不存在 */
+html .ant-message .ant-message-notice {
   padding: 8px 14px;
   border-radius: 6px;
   box-shadow: var(--shadow-sm);
 }
-html .ant-table-wrapper .ant-table {
-  font-size: var(--fs-13);
-}
+/* 表格字号在 theme/antd.ts 的 Table.cellFontSize* token 中配置，不在 CSS 里覆盖 */
 
 /* 页面级状态：加载中、加载失败。整页不滚动，只在居中的卡片里给操作。 */
 .state-wrap {
@@ -1610,9 +1610,10 @@ html .ant-table-wrapper .ant-table {
 
 /* 浮层里的输入框统一 32px，和 Antd 中号一致；
    行高按控件高算，占位符才会在输入框里垂直居中 */
+/* Antd 6 的 Select 结构改为 .ant-select-content，原来的 .ant-select-selector 已不再输出 */
 .map-menu .ant-input,
 .map-menu .ant-input-affix-wrapper,
-.map-menu .ant-select-selector {
+.map-menu .ant-select-content {
   height: var(--ctl-h) !important;
 }
 .map-menu .ant-input {
@@ -1632,7 +1633,7 @@ html .ant-table-wrapper .ant-table {
   padding: 0;
   line-height: 22px;
 }
-.map-menu .ant-select-selection-item {
+.map-menu .ant-select-content {
   line-height: calc(var(--ctl-h) - 2px) !important;
 }
 .map-menu-head {

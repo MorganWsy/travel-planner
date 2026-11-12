@@ -36,8 +36,9 @@ export const notify = {
   },
   error(content: string, detail?: Detail) {
     if (detail?.description) {
+      // Antd 6 把 notification 的 message 字段改名为 title，旧字段已标记 deprecated
       notificationApi?.error({
-        message: content,
+        title: content,
         description: detail.description,
         placement: "bottomRight",
         duration: detail.duration ?? 6,
@@ -48,8 +49,9 @@ export const notify = {
     messageApi?.error({ content, key: detail?.key, duration: detail?.duration ?? 3.5 });
   },
   notify(title: string, detail?: Detail & { type?: "success" | "info" | "warning" | "error" }) {
+    // Antd 6 的 notification 标题字段为 title（v5 为 message），这里跟随新 API
     notificationApi?.[detail?.type ?? "info"]({
-      message: title,
+      title,
       description: detail?.description,
       placement: "bottomRight",
       duration: detail?.duration ?? 5,
