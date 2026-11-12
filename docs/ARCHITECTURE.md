@@ -1,6 +1,6 @@
 # 行迹（travel-planner）架构说明
 
-基线日期：2026-11-12。本文描述**当前仓库实际实现**，不是未来方案。产品目标与阶段计划见 [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)，接口契约见 [API_CONTRACT.md](API_CONTRACT.md)，实际差异与验证记录见 [DELIVERY.md](DELIVERY.md)。
+基线日期：2026-11-12。本文描述**当前仓库实际实现**，不是未来方案。产品目标与阶段计划见 [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)，接口契约见 [API_CONTRACT.md](API_CONTRACT.md)，验收基线见 [ACCEPTANCE.md](ACCEPTANCE.md)，供应商核实见 [PROVIDER_RESEARCH.md](PROVIDER_RESEARCH.md)。原 `DELIVERY.md` 的交付差异、验证记录和原 `UPGRADE_ASSESSMENT.md` 的版本升级记录已合并到本文第 9、10 节。
 
 ## 1. 一句话理解
 
@@ -34,9 +34,11 @@ Vite dev server ── /api 代理 ──► Uvicorn :8007 ── SQLAlchemy ─
 - 数据库连接、会话密钥、SMTP、供应商 Key 从环境变量 / `.env` 读取，示例见 `apps/api/.env`（不提交）。
 - 导出文件落在 `data/exports/<job_id>/`，数据库只保存路径与元数据。
 
-### 2.2 方案中的目标部署（尚未落地）
+### 2.2 目标部署（尚未落地）
 
-`docs/IMPLEMENTATION_PLAN.md` 规划的是同域 Nginx + API + Worker + PostgreSQL/PostGIS + Redis/RQ + 私有文件存储。当前 `infra/` 为空，没有 Compose、Nginx、Redis/RQ 或 Alembic 迁移。升级与容器化建议见 [UPGRADE_ASSESSMENT.md](UPGRADE_ASSESSMENT.md)。
+`IMPLEMENTATION_PLAN.md` 规划的是同域 Nginx + API + Worker + PostgreSQL/PostGIS + Redis/RQ + 私有文件存储。当前 `infra/` 为空，没有 Compose、Nginx、Redis/RQ 或 Alembic 迁移。
+
+容器化建议顺序：先容器化 PostgreSQL/PostGIS 测试库，拿到可重复的集成测试环境；再补 API/Web 服务；Redis/RQ 等任务队列真正替换时再加。保留现有 `dev.cmd` 的本机开发方式，不强制所有人用容器。
 
 ## 3. 仓库目录与职责
 
@@ -176,7 +178,7 @@ HTTP 请求
 
 因此历史、分享、导出都从 `trip_revisions` 取同一条快照，不会出现“当前行程已改、导出还是旧内容”的不一致。恢复历史不是改旧快照，而是把快照写回当前表并生成**新 revision**。
 
-> 当前快照包含 days / places / stops / route_legs，不包含 map_layers。专题图层只在所有者工作台的 `TripDetail` 中返回；分享页使用 `GuideSnapshot`，因此当前分享不展示图层。这是已知差异，见 [DELIVERY.md](DELIVERY.md)。
+> 当前快照包含 days / places / stops / route_legs，不包含 map_layers。专题图层只在所有者工作台的 `TripDetail` 中返回；分享页使用 `GuideSnapshot`，因此当前分享不展示图层。这是已知差异，见 8.2 与 12.4。
 
 ### 4.7 任务模型
 
@@ -242,6 +244,19 @@ HTTP 请求
 - `theme/antd.ts` 定义共享 token 和明暗算法。
 - `styles.css` 有大量 `.ant-*` 选择器，直接覆盖 Tooltip、Modal、Notification 等 DOM。升级 Ant Design 大版本时这是最高风险的区域，必须做视觉回归。
 - `store/theme.ts` 管理 `light/dark/system`，通过 `html[data-theme]` 驱动 CSS 变量。
+
+AntD 6 的实际 DOM 变化（2026-11-12 已按运行时复核）：
+
+| 组件 | AntD 5 选择器 | AntD 6 选择器 |
+| --- | --- | --- |
+| Modal 内边距容器 | `.ant-modal-content` | `.ant-modal-container` |
+| Tooltip 内容 | `.ant-tooltip-inner` | `.ant-tooltip-container` |
+| Tooltip 箭头 | `.ant-tooltip-arrow::before/::after` | `.ant-tooltip-arrow-content` |
+| Notification 标题 | `.ant-notification-notice-message` | `.ant-notification-notice-title` |
+| Message 外框 | `.ant-message-notice-content` | `.ant-message-notice` |
+| Select 内容 | `.ant-select-selector` | `.ant-select-content` |
+
+Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 token `cellFontSize` / `cellFontSizeMD` / `cellFontSizeSM`；否则会被 `.ant-table-small` 的变量重新定义绕开。
 
 ## 6. 核心业务流
 
@@ -397,7 +412,7 @@ HTTP 请求
 | 邮箱 SMTP 生产验证 | 代码支持，未做生产联调 |
 | 天地图底图/搜索实测 | 受域名白名单/Key 类型限制，见 PROVIDER_RESEARCH |
 
-## 9. 当前版本快照
+## 9. 当前版本与升级状态
 
 实测环境（2026-11-12）：
 
@@ -406,22 +421,189 @@ HTTP 请求
 | Node.js | 22.18.0 |
 | pnpm | 11.1.0 |
 | Python | 3.13.14（`apps/api/.venv`） |
-| React / React DOM | 18.3.1 |
+| React / React DOM | 19.3.1 |
 | TypeScript | 7.0.2 |
 | Vite | 8.3.8 |
+| `@vitejs/plugin-react` | 6.3.0 |
 | MapLibre GL JS | 5.24.0 |
-| Ant Design | 5.29.3 |
-| Zustand | 5.0.16 |
-| React Router | 6.30.6 |
-| TanStack Query | 5.105.3 |
+| Ant Design | 6.7.0 |
+| `@ant-design/icons` | 6.3.4 |
+| Zustand | 5.1.0 |
+| React Router | 7.18.5 |
+| TanStack Query | 5.107.1 |
+| dayjs | 1.11.23 |
 | FastAPI | 0.115.6 |
 | SQLAlchemy | 2.0.36 |
 | Pydantic | 2.14.2 |
+| GeoAlchemy2 | 0.16.0 |
+| psycopg | 3.2.3 |
+| uvicorn | 0.34.0 |
+| pytest | 8.3.4 |
+| python-docx | 1.1.2 |
 | PostgreSQL / PostGIS | 17 / 3（交付记录） |
 
-2026-11-12 已完成工具链升级（Vite 8 / plugin-react 6 / TypeScript 7）；React 19、AntD 6、Router 7、MapLibre 6 和后端依赖尚未升级。锁文件：`apps/web/pnpm-lock.yaml`、`apps/api/requirements.lock.txt`。最新稳定版、破坏性变更和推荐升级顺序见 [UPGRADE_ASSESSMENT.md](UPGRADE_ASSESSMENT.md)。
+锁文件：`apps/web/pnpm-lock.yaml`、`apps/api/requirements.lock.txt`（2026-11-12 `pip freeze`）。
 
-## 10. 常见改动入口
+### 9.1 已完成升级
+
+**第 0 步：冻结基线（2026-11-12）**
+
+- 用 `pip freeze` 冻结 Python 环境到 `apps/api/requirements.lock.txt`。
+- 基线复跑：纯逻辑 pytest 16 passed；全量 16 passed / 16 skipped（未设置 `TEST_DATABASE_URL`）；`pip check` 无冲突；前端 typecheck / build 通过。
+
+**第 1 步：工具链（2026-11-12，提交 `8dbab0f`）**
+
+- 升级 `vite@8.3.8`、`@vitejs/plugin-react@6.3.0`、`typescript@7.0.2`。
+- `vite.config.ts` 从对象形式 `manualChunks` 改为 `build.rolldownOptions.output.codeSplitting.groups`，保留 react / maplibre / antd 三个 vendor 分块。
+- `tsconfig.json` 删除未使用的 `baseUrl` / `paths`；`src/vite-env.d.ts` 显式引用 `@types/geojson`，因为 TS 7 不再自动带入全局命名空间。
+- `openapi-typescript@7.13.0` 仍调用 TS 5 的 `ts.factory`，已从应用依赖移除，改为 `pnpm codegen:api` 在隔离环境中使用 TypeScript 5.9.3。
+
+**第 2 步：UI 栈（2026-11-12）**
+
+- 升级 React 19.3.1 / React DOM 19.3.1 / `@types/react` 19.3.0 / `@types/react-dom` 19.3.0。
+- 升级 `react-router-dom@7.18.5`，删除 `BrowserRouter` 的 `future` 参数。
+- 升级 `antd@6.7.0`、`@ant-design/icons@6.3.4`。
+- 升级 `zustand@5.1.0`、`@tanstack/react-query@5.107.1`、`dayjs@1.11.23`。
+- 删除 `apps/web/pnpm-workspace.yaml` 中 `@types/react: 18.3.12` 的 override。
+- 按 AntD 6 运行时 DOM 修正 `styles.css`：Modal、Tooltip、Notification、Message、Select；Table 字号改走主题 token。
+- 把 `notify.tsx` 的 notification 标题字段从 `message` 改为 `title`。
+
+### 9.2 升级验证（UI 批次）
+
+| 检查 | 命令 / 方式 | 结果 |
+| --- | --- | --- |
+| peer 依赖 | `pnpm peers check` | 无问题 |
+| 类型检查 | `pnpm typecheck`（TS 7.0.2） | 0 错 |
+| 生产构建 | `pnpm build`（Vite 8.3.8 / Rolldown） | 通过，约 0.8s |
+| 产物体积 | `dist/assets` | react 257.76KB、antd 993.81KB、maplibre 1,027.67KB、WorkspacePage 94.60KB、index 88.11KB |
+| 桌面冒烟 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 → 攻略 → 导出 MD | 正常，控制台无 error/warning |
+| 历史页 | 版本列表、快照详情、表格 | 正常，表格字号 13px |
+| 设置页 | 地图数据源、外观、登录会话表格、Popconfirm | 正常 |
+| 分享弹窗 | 有效期 Select、密码 Input、原生 checkbox | 正常，Modal 内边距 10px 12px |
+| 新建行程 | RangePicker、日期面板 | 正常 |
+| 深色主题 | message / notification / tooltip / 页面变量 | 背景 `#19212b`、文字 `#e5edf6`，箭头颜色一致 |
+| AntD 6 组件 | Modal、Tooltip、Notification、Message、Select、DatePicker、TimePicker、Popconfirm、Segmented、Table、Dropdown | 已逐项检查 DOM 与关键样式 |
+
+未在本批次复测：390×844 手机视口、真机浏览器、注册/验证码全流程、地图三种底图切换与测距。这些仍需在完整验收时执行。当前 headless 预览环境不触发 `requestAnimationFrame`，rc-motion 的进出场动画会停在 prepare 状态，不能把动画状态当作应用缺陷；真实浏览器需另行确认。
+
+### 9.3 尚未升级
+
+| 项 | 当前 | 目标/说明 |
+| --- | --- | --- |
+| MapLibre GL JS | 5.24.0 | 6.x：ESM-only、要求 WebGL2；默认导入需改命名空间导入，并补 WebGL2 降级提示 |
+| FastAPI / Starlette | 0.115.6 / 0.41.3 | 0.16x；回归路由、异常、CORS、静态托管、OpenAPI |
+| SQLAlchemy / GeoAlchemy2 | 2.0.36 / 0.16.0 | 2.1 / 0.21 一起升级，跑 PostGIS 集成测试 |
+| pytest | 8.3.4 | 9.x；回归 fixture 作用域与配置项 |
+| cryptography | 44.0.0 | 50.x；回归 Fernet 加解密、Key 掩码 |
+| Node / pnpm | 22.18.0 / 11.1.0 | Node 24 LTS、pnpm 12 可选；升级 pnpm 会改锁文件格式 |
+| Docker | 未安装 | 先补 PostgreSQL/PostGIS Compose，再补 API/Web |
+
+升级原则：按层提交、每层可回滚；不要把 React、MapLibre、后端依赖塞进同一个无法定位问题的提交。
+
+## 10. 交付范围、差异与验证
+
+### 10.1 交付范围
+
+已实现一条可运行的纵向闭环：注册登录 → 建行程 → 建/导地点 → 排事项 → 看时间线与冲突 → 手工或真实路线 → 单日优化预览并应用 → 版本历史与恢复 → 攻略导出（MD/DOCX）→ 分享只读页。
+
+未实现：找回密码、Redis/RQ、Alembic 迁移、Docker Compose/Nginx、GIS 栅格与矢量瓦片、地形与三维、外部图层服务、PWA 离线、多日优化、OR-Tools、附件与图片、原生 App 与 Electron。邮箱验证码与可选 SMTP 已实现（未配 SMTP 时验证码写日志）；分享页当前只展示攻略快照，不包含地图图层。
+
+判定标准遵循 `AGENTS.md`：不把“页面能打开”“接口返回 200”当作完成；每个能力在 `/api/v1/providers/capabilities` 中标注 configured/verified，未实测项不宣称可用。
+
+### 10.2 关键设计决策
+
+| 决策 | 理由 | 代价 |
+| --- | --- | --- |
+| 口令用 `hashlib.scrypt`（N=2^14, r=8, p=1） | 本机无 Argon2 依赖；scrypt 同为内存硬散列且在 stdlib | 与 Argon2id 的行业推荐不同，后续可在 `security.py` 单点替换 |
+| CSRF 由会话令牌 HMAC 派生 | 刷新后服务端可重算同一值，无需存明文，也不把令牌放 localStorage | 令牌泄露即 CSRF 失效，与 Cookie 同源风险一致 |
+| 任务用线程池 + 数据库状态机 | 本机无 Redis；契约要求的状态、幂等、取消、重试语义必须保留 | 单进程有效；多副本需换 RQ/Celery，`services/jobs.py::submit` 是唯一替换点 |
+| 无路网数据时用“直线 × 绕行系数”估算矩阵 | 让优化在无 Key 时仍可演示与测试，结果强制标注 `matrix_source=estimate` | 估算值不能承诺真实行程时间，UI 与导出均带警示 |
+| 供应商记录默认不落库，只保存用户复制的最小字段 | 没有书面授权证据，`persist=unknown` 不能当作 allowed | 保存后不再关联 provider_id，无法回查详情 |
+| 分享快照只存业务投影 | 历史、导出、分享、离线必须来自同一份允许保存的数据 | 含几何副本，体积随版本增长 |
+| 优化仅支持单日 | 多日分配需要真实矩阵、节点上限和更复杂约束 | `scope=trip` 明确拒绝，不静默降级 |
+
+### 10.3 与方案文档的差异
+
+| 条目 | 方案 | 实现 | 原因 |
+| --- | --- | --- | --- |
+| 任务队列 | Redis + RQ | 线程池 + jobs 表 | 本机无 Redis；语义保留 |
+| 邮件 | 验证邮件 + 找回密码 | 邮箱验证码 + 可选 SMTP；找回密码未实现 | 未配 SMTP 时写日志；不伪造生产邮件 |
+| 供应商持久化 | 按用途矩阵 | 默认 persist=unknown，仅存用户复制字段 | 无授权证据 |
+| 优化器 | OR-Tools | 2-opt / Or-opt 启发式 | OR-Tools 未安装且 Python 3.13 轮子不确定；方案只承诺可行/限时改进 |
+| PWA | vite-plugin-pwa + Workbox | 未实现 | 优先级低于核心闭环 |
+| 数据库迁移 | Alembic | `scripts/init_db.py` 建表 | 开发期够用；上线前补 Alembic 基线 |
+| 前端 React | React 19 | React 19.3.1 | 2026-11-12 已对齐 |
+
+### 10.4 安全与数据权利边界
+
+- Key 通过设置页写入 `app_settings`，使用 `SESSION_SECRET` 派生的 Fernet 密钥加密；接口只返回掩码（前 4 + 后 4），明文不下发。保存后重建适配器缓存，立即生效。
+- 只有 `role=admin` 可写 Key；第一个注册者自动成为管理员。
+- 天地图浏览器瓦片 Key 必然出现在前端瓦片 URL 中，只能靠控制台域名白名单限制；服务端 Key 不下发。
+- 会话令牌 32 字节随机，库中只存 SHA-256；Cookie HttpOnly、SameSite=Lax，生产可加 Secure；空闲 7 天、最长 14 天。
+- 登录限流 10 次/15 分钟（IP+邮箱），注册 5 次/小时，分享密码 5 次/15 分钟；限流为进程内，多副本需改 Redis。
+- 越权统一返回 404，不区分“不存在”和“无权访问”；下载与分享访问都重新校验归属与有效期。
+- 日志不记录请求体与 Key；错误响应不含堆栈与上游原始报文。
+- 分享页明确告知：已下载到设备的副本无法被服务端撤回。
+
+### 10.5 验证记录
+
+**2026-11-12 基线与工具链**
+
+| 检查 | 命令 | 结果 |
+| --- | --- | --- |
+| 后端纯逻辑测试 | `pytest tests/test_coords.py tests/test_schedule.py tests/test_guide.py -q` | 16 passed |
+| 后端全量测试 | `pytest tests -q` | 16 passed / 16 skipped（未设置 `TEST_DATABASE_URL`） |
+| Python 依赖一致性 | `pip check` | No broken requirements found |
+| 前端 peer 依赖 | `pnpm peers check` | 无问题 |
+| 前端类型检查 | `pnpm typecheck` | 0 错 |
+| 前端构建 | `pnpm build` | 通过；react 257.76KB、antd 993.81KB、maplibre 1,027.67KB |
+| 开发服务器 | `pnpm dev --host 127.0.0.1` | Vite 8.3.8 启动，登录页正常 |
+| 生产构建托管 | FastAPI 托管 `dist`，访问 `:8007` | 登录页与静态资源正常，无 pageerror |
+| 登录后主流程 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 | 正常；地图画布 400×274；无 pageerror |
+| OpenAPI 类型生成 | `pnpm codegen:api`（隔离 TS 5.9.3） | 成功生成 `src/api/schema.d.ts` |
+
+**2026-11-04 历史验证（AntD 5 基线，UI 升级后需复测的部分已注明）**
+
+- 桌面 1440×900：登录 → 工作台 → 攻略 → 历史 → 分享，无 pageerror；行程卡片 3 天 / 12 事项；地图标记编号按日期顺序。
+- 手机 390×844：横向溢出 0px；顶栏图标完整；地图后紧接当天行程，行程/地点分段切换。（AntD 6 批次未复测）
+- 多尺寸 1920×1080 / 1440×900 / 1366×768 / 1280×800 / 1024×768 / 390×844：页面级横向与纵向溢出均为 0；滚动只发生在面板与设置页内容区内部。
+- 深浅主题：登录页、工作台、设置页各切换一次；Tooltip 浅色 `#ffffff/#1b2129`、深色 `#19212b/#e5edf6`，无残留深色气泡。
+- 拖动排序、侧栏收起、地图控件、设置页五组、高德底图、字号层级、GeoJSON 标注、指北针、测距、右键新增、注记开关、版本历史、天地图搜索、分享链路、MD/DOCX 导出均已做过回归。
+- 数据库初始化：PostgreSQL 17.2 / PostGIS 3.5，13 张表建成；设置 `TEST_DATABASE_URL` 时全量测试 29 passed。
+- 实测中发现并修复：`trip_stops` 排序错位、攻略交通段索引键不一致、跨容器移动校验过严、锁定顺序校验、移动端顶栏溢出。
+
+### 10.6 待补外部验证
+
+| 检查 | 阻塞原因 |
+| --- | --- |
+| 天地图底图出图 | 浏览器端 Key 的域名白名单未包含 `localhost`，瓦片返回 `403 / 301007`；代码已改用 DataServer XYZ 接口 |
+| 天地图服务端搜索 | 当前字段填的是浏览器端 Key，需换「服务器端」类型并配 IP 白名单 |
+| 高德各能力实测 | 已配置 Web 服务 Key，仍需逐项核对配额与允许用途 |
+| DOCX 人工打开检查 | 需人工确认中文字体、分页与长备注 |
+| 真机 Android Chrome / iPhone Safari | 需要真机；当前为桌面浏览器模拟视口 |
+
+### 10.7 遗留项与推进顺序
+
+1. **P0 剩余**：用项目 Key 逐项实测搜索/地理编码/驾车/步行/公交/天气，把 `verified` 改为 true 并记录 QPS 与允许用途。
+2. **Alembic 基线迁移**：用当前模型生成 `0001_initial`，CI 检查 `alembic check`；`init_db.py` 仅用于本地。
+3. **P2 补全**：输入提示去抖与旧请求取消、双源分组展示、`no-store` 全链路核查、公交城市上下文校验。
+4. **P3 扩展**：真实矩阵预算控制（每任务 400 段上限）、多日分配、冲突诊断文案。
+5. **P4 补全**：附件/图片、GeoPackage 与 Shapefile 预检、COG/DEM 与 TiTiler、PWA 离线攻略、分享页图层。
+6. **发布前**：SMTP 生产联调、HTTPS 与反向代理、备份恢复演练、日志脱敏审计。
+7. **技术栈**：MapLibre 6、后端依赖升级；详见 9.3。
+8. **容器化**：先 PostgreSQL/PostGIS 测试库，再 API/Web，Redis/RQ 最后加。
+
+### 10.8 对原方案的修正意见
+
+1. **范围与节奏**：P0–P5 加 Electron 是数月量级；首版应收窄为“可保存的行程 + 时间线 + 导出 + 分享”，GIS 与三维后置。
+2. **用途矩阵可操作性**：`persist=unknown` 在合规上正确，但会切断“搜索→保存”。建议字段级策略：名称、坐标、类别等事实性最小字段允许保存并标注来源；介绍、图片、评分等受限字段禁止。
+3. **优化指标与配额**：真实矩阵获取时间远大于求解时间，应把预算写成“矩阵请求数优先，求解时间其次”，并明确矩阵复用/缓存条件。
+4. **并发模型**：800ms 防抖自动保存 + 全量 revision + If-Match，多标签页会频繁 409；建议按实体粒度做版本，或把长文本单独存放。
+5. **时间语义**：目标用户主要在中国大陆，首版建议固定 `Asia/Shanghai`，把时区做成只读字段。
+6. **快照体积**：30 天 × 30 事项、200 个版本约 10–20MB/行程；写入时可压缩（JSONB + zstd 或 gzip 列）。
+7. **外部配置耦合**：地图表现依赖天地图域名白名单/Key 类型，代码替代不了控制台配置；设置页应显示当前访问地址，方便对照填写。
+
+## 11. 常见改动入口
 
 | 想改什么 | 先看哪里 |
 | --- | --- |
@@ -436,19 +618,21 @@ HTTP 请求
 | 改供应商能力 | `providers/*.py` + `config/provider_policy.json` |
 | 改前端主题 | `theme/antd.ts` + `store/theme.ts` + `styles.css` |
 
-## 11. 已知技术债与风险
+## 12. 已知技术债与风险
 
 1. **数据库迁移仍是 `create_all`**：只适合开发；上线前需要 Alembic 基线。Python 依赖已冻结到 `apps/api/requirements.lock.txt`。
 2. **任务队列是进程内线程池**：多副本、重启恢复和长任务隔离不足；换 RQ 是明确后续项。
 3. **限流是进程内**：多副本部署会失效，需要 Redis 等共享存储。
 4. **快照未包含图层**：分享/历史/导出看不到专题图层，和 API 契约中的 `TripDetail.map_layers` 有差异。
-5. **`styles.css` 深度覆盖 Ant Design DOM**：AntD 大版本升级必须做视觉回归。
+5. **`styles.css` 深度覆盖 Ant Design DOM**：AntD 6 已完成一轮适配，但后续升级仍必须做视觉回归；优先逐步迁移到 `classNames` / `styles` API。
 6. **地图组件体量大**：`MapCanvas.tsx` 职责多，后续可拆为底图、标注、测量、图层、路线子模块。
 7. **供应商持久化策略保守**：路线几何默认不落库，刷新后重查；这是合规选择，不是 bug。
-8. **前端其余大版本待升级**：工具链已到 Vite 8 / TS 7；React 18、AntD 5、MapLibre 5、Router 6 仍在旧大版本，升级路径见评估文档。
+8. **MapLibre 6 与后端依赖待升级**：UI 栈已到 React 19 / AntD 6 / Router 7；MapLibre 仍是 5.24.0，后端仍是 FastAPI 0.115 / SQLAlchemy 2.0。升级路径见 9.3。
 9. **缺少容器化**：本机依赖直装 PostgreSQL/Node/Python，换机成本高；用户已表示可安装 Docker，建议补 Compose。
+10. **AntD 6 批次未复测手机视口与真机**：390×844、iPad、Android Chrome、iPhone Safari 仍需在后续验收中执行；当前只完成桌面浏览器回归。
+11. **`openapi-typescript` 与 TS 7 不兼容**：只能通过 `pnpm codegen:api` 的隔离 TS 5.9.3 运行，上游修复前不要把它加回应用依赖。
 
-## 12. 术语
+## 13. 术语
 
 | 术语 | 含义 |
 | --- | --- |

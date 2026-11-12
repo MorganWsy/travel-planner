@@ -2,7 +2,7 @@
 
 开发默认 SQLite（无需额外服务），生产通过 DATABASE_URL 切 PostgreSQL。
 为保持两套环境行为一致，模型层不使用 PostGIS 专有类型：几何以 GeoJSON（WGS84）存入 JSON 列，
-空间计算在服务层完成。PostGIS 迁移路径记录在 docs/DELIVERY.md 的遗留项中。
+空间计算在服务层完成。PostGIS 迁移路径记录在 docs/ARCHITECTURE.md 第 10.7 节（Alembic 基线）。
 """
 
 from __future__ import annotations

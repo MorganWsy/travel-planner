@@ -1,7 +1,7 @@
 """口令散列、令牌与会话签名工具。
 
 口令使用标准库 scrypt（N=2^14, r=8, p=1）。方案文档原写 Argon2id，但本机无该依赖且
-scrypt 同为内存硬散列并被 stdlib 支持；差异记录在 docs/DELIVERY.md，可平滑替换。
+scrypt 同为内存硬散列并被 stdlib 支持；差异记录在 docs/ARCHITECTURE.md 第 10.2 节，可平滑替换。
 """
 
 from __future__ import annotations

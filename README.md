@@ -1,8 +1,8 @@
 # 旅游规划平台 · 行迹
 
-本仓库是 `docs/IMPLEMENTATION_PLAN.md` 的**可运行实现**（P0–P1 纵向闭环 + P2/P3/P4 的部分能力），不是页面骨架。当前状态与方案文档的差异、未实现项、外部依赖，见 [docs/DELIVERY.md](docs/DELIVERY.md)。
+本仓库是 `docs/IMPLEMENTATION_PLAN.md` 的**可运行实现**（P0–P1 纵向闭环 + P2/P3/P4 的部分能力），不是页面骨架。当前状态与方案文档的差异、未实现项、外部依赖，见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 第 8–10 节。
 
-想快速理解代码结构，先看 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。当前实际版本为 React 18.3.1 / Vite 8.3.8 / TypeScript 7.0.2 / MapLibre 5.24 / Ant Design 5.29；2026-11-12 已完成工具链升级（Vite 8、plugin-react 6、TypeScript 7），React 19 / AntD 6 / Router 7 / MapLibre 6 / 后端依赖尚未升级。版本对比、破坏性变更和后续顺序见 [docs/UPGRADE_ASSESSMENT.md](docs/UPGRADE_ASSESSMENT.md)。
+想快速理解代码结构，先看 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。当前实际版本为 React 19.3.1 / Vite 8.3.8 / TypeScript 7.0.2 / MapLibre 5.24 / Ant Design 6.7；2026-11-12 已完成工具链（Vite 8、plugin-react 6、TypeScript 7）与 UI 栈（React 19、Router 7、AntD 6）升级，MapLibre 6 / 后端依赖尚未升级。版本快照、AntD 6 DOM 适配和升级验证见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 第 9 节。
 
 ## 现在能做什么
 
@@ -29,13 +29,13 @@ travel-planner/
   apps/web/            React + Vite 前端（src/api/schema.d.ts 由 OpenAPI 生成）
   config/              供应商用途策略
   scripts/             建库、OpenAPI 导出、示例数据
-  docs/                方案、契约、验收、核实记录、交付说明
+  docs/                方案、契约、验收、架构、供应商核实记录
   tests/               pytest（纯逻辑 + PostgreSQL 集成）
 ```
 
 ## 快速开始
 
-前置：Node 22.12+（当前 22.18.0）、pnpm 11、Python 3.13、PostgreSQL 17 + PostGIS 3。当前开发方式不依赖 Docker；Docker Compose 尚未落地，容器化计划见 [docs/UPGRADE_ASSESSMENT.md](docs/UPGRADE_ASSESSMENT.md)。
+前置：Node 22.12+（当前 22.18.0）、pnpm 11、Python 3.13、PostgreSQL 17 + PostGIS 3。当前开发方式不依赖 Docker；Docker Compose 尚未落地，容器化计划见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 第 2.2 节。
 
 1. 写后端配置 `apps/api/.env`（已生成，只需改一行密码）：
 
@@ -77,7 +77,7 @@ cd apps\web
 pnpm dev
 ```
 
-`apps/web/pnpm-workspace.yaml` 只有一条依赖覆盖：`@types/react` 固定 18.3.12。因为 `@types/react-dom@18.3.1` 把 `@types/react: *` 解析成 19.x，会让 `createPortal` 的返回类型与项目里的 React 18 类型不兼容。**当前 React 18 阶段不要删**；升级 React 19 时必须删除它，否则 `@types/react` 会被锁在 18，详见 [docs/UPGRADE_ASSESSMENT.md](docs/UPGRADE_ASSESSMENT.md)。
+`apps/web/pnpm-workspace.yaml` 现在只声明 workspace 根目录，不再覆盖 `@types/react`。React 18 阶段曾把 `@types/react` 固定为 18.3.12，避免 `@types/react-dom@18` 解析到 React 19 类型；升级 React 19 后该 override 已删除，类型检查与构建均通过。
 
 打开 http://localhost:5177 。示例账号 `demo@example.com` / `demo-password-123`（管理员），或自行注册（第一个注册者为管理员）。注册需邮箱验证码：没配 SMTP 时验证码打印在后端日志里。接口文档在 http://127.0.0.1:8007/docs 。
 
@@ -136,6 +136,4 @@ cd apps/web && pnpm codegen:api
 3. [API 与类型契约](docs/API_CONTRACT.md)
 4. [验收与测试清单](docs/ACCEPTANCE.md)
 5. [地图供应商核实记录](docs/PROVIDER_RESEARCH.md)
-6. [交付说明与差异记录](docs/DELIVERY.md)
-7. [技术栈升级评估](docs/UPGRADE_ASSESSMENT.md)
-8. [AI 开发约定](AGENTS.md)
+6. [AI 开发约定](AGENTS.md)
