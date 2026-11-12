@@ -1148,10 +1148,7 @@ export interface components {
         };
         /** Body_import_places_api_v1_trips__trip_id__import_post */
         Body_import_places_api_v1_trips__trip_id__import_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** CapabilityOut */
@@ -2542,6 +2539,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;
