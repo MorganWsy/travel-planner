@@ -432,15 +432,17 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 | React Router | 7.18.5 |
 | TanStack Query | 5.107.1 |
 | dayjs | 1.11.23 |
-| FastAPI | 0.115.6 |
-| SQLAlchemy | 2.0.36 |
-| Pydantic | 2.14.2 |
-| GeoAlchemy2 | 0.16.0 |
-| psycopg | 3.2.3 |
-| uvicorn | 0.34.0 |
-| pytest | 8.3.4 |
-| python-docx | 1.1.2 |
-| PostgreSQL / PostGIS | 17 / 3（交付记录） |
+| FastAPI | 0.162.5 |
+| Starlette | 1.10.0 |
+| SQLAlchemy | 2.1.8 |
+| Pydantic | 2.14.3 |
+| GeoAlchemy2 | 0.21.0 |
+| psycopg | 3.3.9 |
+| uvicorn | 0.54.0 |
+| pytest | 9.2.0 |
+| python-docx | 1.2.0 |
+| cryptography | 50.0.2 |
+| PostgreSQL / PostGIS | 17.2 / 3.5（本机测试库） |
 
 锁文件：`apps/web/pnpm-lock.yaml`、`apps/api/requirements.lock.txt`（2026-11-12 `pip freeze`）。
 
@@ -476,7 +478,16 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 - 地图初始化捕获 `GPUInitializationError`，WebGL2 不可用时在画布位置显示明确降级提示，日程、时间线和攻略不受影响。
 - 真实无头 Edge 冒烟：工作台地图画布 812×713，`webgl2=true`，未出现降级层，控制台无 error/warning。
 
-### 9.2 升级验证（UI + 地图批次）
+**第 4 步：后端依赖（2026-11-12）**
+
+- 升级 FastAPI 0.162.5 / Starlette 1.10.0、SQLAlchemy 2.1.8 / GeoAlchemy2 0.21.0、Pydantic 2.14.3 / pydantic-settings 2.16.2、psycopg[binary] 3.3.9、uvicorn 0.54.0。
+- 同步升级 pytest 9.2.0、cryptography 50.0.2、python-docx 1.2.0、shapely 2.2.0、alembic 1.20.1、python-multipart 0.0.33。
+- 本机 PostgreSQL 17.2 / PostGIS 3.5 建 `travel_planner_test`；完整测试 32 passed（此前无测试库时为 16 passed / 16 skipped）。
+- `pip check` 无冲突；`app.main` 导入成功；uvicorn 0.54 在 8008 启动后 health/config 均返回 200。
+- 重新生成 OpenAPI 与 `schema.d.ts`；差异仅为上传字段 `format: binary` 消失、`ValidationError` 增加 `input` / `ctx`，业务类型未变。
+- FastAPI 0.162 新增 `opentelemetry-api` 与 `annotated-doc` 依赖，已一并写入锁文件。
+
+### 9.2 升级验证（UI + 地图 + 后端批次）
 
 | 检查 | 命令 / 方式 | 结果 |
 | --- | --- | --- |
@@ -484,6 +495,10 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 | 类型检查 | `pnpm typecheck`（TS 7.0.2） | 0 错 |
 | 生产构建 | `pnpm build`（Vite 8.3.8 / Rolldown） | 通过，约 0.8s |
 | 产物体积 | `dist/assets` | react 257.76KB、antd 993.82KB、maplibre 1,076.79KB、WorkspacePage 95.70KB、index 89.38KB |
+| 后端依赖一致性 | `pip check` | No broken requirements found |
+| 后端完整测试 | `TEST_DATABASE_URL` → `pytest tests -q` | 32 passed |
+| 后端启动 | uvicorn 0.54，临时 `:8008` 的 health/config | 均返回 200 |
+| OpenAPI 类型生成 | `scripts/gen_openapi.py` + `pnpm codegen:api` | 成功，业务类型无变化 |
 | 桌面冒烟 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 → 攻略 → 导出 MD | 正常，控制台无 error/warning |
 | MapLibre 6 | 工作台地图初始化 | 画布 812×713、WebGL2 可用、无降级提示、无 console error |
 | 历史页 | 版本列表、快照详情、表格 | 正常，表格字号 13px |
@@ -495,20 +510,18 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 
 未在本批次复测：390×844 手机视口、真机浏览器、注册/验证码全流程、地图三种底图切换与测距。这些仍需在完整验收时执行。当前 headless 预览环境不触发 `requestAnimationFrame`，rc-motion 的进出场动画会停在 prepare 状态，不能把动画状态当作应用缺陷；真实浏览器需另行确认。
 
-### 9.3 尚未升级
+### 9.3 尚未完成的基础设施
 
-前端大版本升级已全部完成；剩余为后端依赖与工具版本。
+前后端主要依赖升级已完成；剩余是运行环境、迁移基线和发布前工作。
 
-| 项 | 当前 | 目标/说明 |
+| 项 | 当前 | 说明 |
 | --- | --- | --- |
-| FastAPI / Starlette | 0.115.6 / 0.41.3 | 0.16x；回归路由、异常、CORS、静态托管、OpenAPI |
-| SQLAlchemy / GeoAlchemy2 | 2.0.36 / 0.16.0 | 2.1 / 0.21 一起升级，跑 PostGIS 集成测试 |
-| pytest | 8.3.4 | 9.x；回归 fixture 作用域与配置项 |
-| cryptography | 44.0.0 | 50.x；回归 Fernet 加解密、Key 掩码 |
 | Node / pnpm | 22.18.0 / 11.1.0 | Node 24 LTS、pnpm 12 可选；升级 pnpm 会改锁文件格式 |
-| Docker | 未安装 | 先补 PostgreSQL/PostGIS Compose，再补 API/Web |
+| Docker | 未安装 | 建议先补 PostgreSQL/PostGIS Compose，再补 API/Web |
+| WSL | 安装包已下载，未安装 | `C:\Users\wsy\Downloads\wsl.3.0.3.0.x64.msi`；Docker Desktop 需要它 |
+| Alembic | 1.20.1 已安装，未建基线 | 上线前用当前模型生成 `0001_initial` |
 
-升级原则：按层提交、每层可回滚；不要把 React、MapLibre、后端依赖塞进同一个无法定位问题的提交。
+Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当前测试仍通过，暂不引入额外依赖。
 
 ## 10. 交付范围、差异与验证
 
@@ -557,19 +570,19 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 
 ### 10.5 验证记录
 
-**2026-11-12 基线与工具链**
+**2026-11-12 升级验证**
 
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
 | 后端纯逻辑测试 | `pytest tests/test_coords.py tests/test_schedule.py tests/test_guide.py -q` | 16 passed |
-| 后端全量测试 | `pytest tests -q` | 16 passed / 16 skipped（未设置 `TEST_DATABASE_URL`） |
+| 后端全量测试 | `TEST_DATABASE_URL` 指向 `travel_planner_test` 后 `pytest tests -q` | 32 passed |
 | Python 依赖一致性 | `pip check` | No broken requirements found |
 | 前端 peer 依赖 | `pnpm peers check` | 无问题 |
 | 前端类型检查 | `pnpm typecheck` | 0 错 |
 | 前端构建 | `pnpm build` | 通过；react 257.76KB、antd 993.82KB、maplibre 1,076.79KB |
 | 开发服务器 | `pnpm dev --host 127.0.0.1` | Vite 8.3.8 启动，登录页正常 |
 | 生产构建托管 | FastAPI 托管 `dist`，访问 `:8007` | 登录页与静态资源正常，无 pageerror |
-| 登录后主流程 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 | 正常；地图画布 400×274；无 pageerror |
+| 登录后主流程 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 | 正常；地图画布 812×713；无 pageerror |
 | OpenAPI 类型生成 | `pnpm codegen:api`（隔离 TS 5.9.3） | 成功生成 `src/api/schema.d.ts` |
 
 **2026-11-04 历史验证（AntD 5 基线，UI 升级后需复测的部分已注明）**
@@ -600,8 +613,8 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 4. **P3 扩展**：真实矩阵预算控制（每任务 400 段上限）、多日分配、冲突诊断文案。
 5. **P4 补全**：附件/图片、GeoPackage 与 Shapefile 预检、COG/DEM 与 TiTiler、PWA 离线攻略、分享页图层。
 6. **发布前**：SMTP 生产联调、HTTPS 与反向代理、备份恢复演练、日志脱敏审计。
-7. **技术栈**：MapLibre 6 已完成；继续升级后端依赖，详见 9.3。
-8. **容器化**：先 PostgreSQL/PostGIS 测试库，再 API/Web，Redis/RQ 最后加。
+7. **技术栈**：前端与后端主要依赖升级已完成；剩余 Alembic 基线、Docker/WSL 与发布前联调。
+8. **容器化**：Docker 未安装，WSL 安装包已下载未安装；先补 PostgreSQL/PostGIS Compose，再 API/Web，Redis/RQ 最后加。
 
 ### 10.8 对原方案的修正意见
 
@@ -637,10 +650,10 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 5. **`styles.css` 深度覆盖 Ant Design DOM**：AntD 6 已完成一轮适配，但后续升级仍必须做视觉回归；优先逐步迁移到 `classNames` / `styles` API。
 6. **地图组件体量大**：`MapCanvas.tsx` 职责多，后续可拆为底图、标注、测量、图层、路线子模块。
 7. **供应商持久化策略保守**：路线几何默认不落库，刷新后重查；这是合规选择，不是 bug。
-8. **后端依赖待升级**：前端已到 React 19 / AntD 6 / Router 7 / MapLibre 6；后端仍是 FastAPI 0.115 / SQLAlchemy 2.0。升级路径见 9.3。
-9. **缺少容器化**：本机依赖直装 PostgreSQL/Node/Python，换机成本高；用户已表示可安装 Docker，建议补 Compose。
-10. **AntD 6 批次未复测手机视口与真机**：390×844、iPad、Android Chrome、iPhone Safari 仍需在后续验收中执行；当前只完成桌面浏览器回归。
-11. **`openapi-typescript` 与 TS 7 不兼容**：只能通过 `pnpm codegen:api` 的隔离 TS 5.9.3 运行，上游修复前不要把它加回应用依赖。
+8. **基础设施未容器化**：前后端依赖已升级，但本机仍直装 PostgreSQL/Node/Python；Docker 未安装，WSL 安装包已下载未安装。换机复现依赖本机服务，建议补 Compose。
+9. **AntD 6 批次未复测手机视口与真机**：390×844、iPad、Android Chrome、iPhone Safari 仍需在后续验收中执行；当前只完成桌面浏览器回归。
+10. **`openapi-typescript` 与 TS 7 不兼容**：只能通过 `pnpm codegen:api` 的隔离 TS 5.9.3 运行，上游修复前不要把它加回应用依赖。
+11. **Starlette TestClient 弃用警告**：Starlette 1.10 提示 `httpx` 后端将迁移到 `httpx2`；当前 32 项测试通过，暂不引入额外依赖。
 
 ## 13. 术语
 
