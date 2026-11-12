@@ -375,11 +375,85 @@ html .ant-message .ant-message-notice {
   font-size: var(--fs-14);
 }
 
+/* 规划页顶栏的标题区：标题在上、日期范围在下。
+   当前标题本来就是可编辑输入框，但 borderless 样式看起来像面包屑；
+   这里用更紧凑的输入框和铅笔按钮把“可重命名”表达出来。 */
+.trip-heading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.trip-title-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title-input.ant-input {
+  height: 20px;
+  padding: 0 4px;
+  line-height: 20px;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.title-input.ant-input:hover,
+.title-input.ant-input:focus {
+  background: var(--panel-2);
+}
+
+.title-input.ant-input:focus {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.title-edit-btn {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  /* 常驻低透明度，先告诉用户“这里能改”；悬停再变清晰 */
+  opacity: 0.5;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+/* 悬停标题区或键盘聚焦时铅笔变清晰，避免顶栏一直很花 */
+.trip-heading:hover .title-edit-btn,
+.title-edit-btn:focus-visible {
+  opacity: 1;
+}
+
+.title-edit-btn:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.trip-date-range {
+  color: var(--muted);
+  font-size: var(--fs-13);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  padding-left: 4px;
+  white-space: nowrap;
+}
+
 .rev {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-12);
-  line-height: 1;
+  font-size: var(--fs-13);
+  line-height: 1.2;
 }
 
 /* 顶栏内所有文字元素按行高 1 摆放，避免基线与图标错位 */
@@ -2658,7 +2732,8 @@ html .ant-message .ant-message-notice {
   align-items: center;
   gap: 8px;
   padding: 6px 12px 6px 10px;
-  border-radius: 999px;
+  /* 与登录卡片保持同一圆角；这里是背景图注，不做胶囊形 */
+  border-radius: 10px;
   /* 跟随主题：浅色主题用白底深字，深色主题用黑底浅字 */
   background: rgba(255, 255, 255, 0.88);
   color: var(--text);
@@ -3679,6 +3754,9 @@ html .ant-message .ant-message-notice {
     display: none;
   }
   .title-input {
+    display: none;
+  }
+  .trip-heading {
     display: none;
   }
   .hide-sm {

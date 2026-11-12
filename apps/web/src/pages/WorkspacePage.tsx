@@ -10,6 +10,7 @@ import {
   Spin,
   TimePicker,
   Tooltip,
+  type InputRef,
 } from "antd";
 import AppSelect from "../components/AppSelect";
 import AppNumber from "../components/AppNumber";
@@ -23,7 +24,7 @@ import SearchPanel from "../components/SearchPanel";
 import DayPanel from "../components/DayPanel";
 import SidePanel from "../components/SidePanel";
 import TopBar from "../components/TopBar";
-import { IconAlert, IconBook, IconHistory, IconMore, IconShare } from "../components/icons";
+import { IconAlert, IconBook, IconEdit, IconHistory, IconMore, IconShare } from "../components/icons";
 import DragModal from "../components/DragModal";
 import Field from "../components/Field";
 
@@ -111,6 +112,7 @@ export default function WorkspacePage() {
   // 选点有两用：给新建地点填坐标，或给某个图层打一个点
   const [pickLayerId, setPickLayerId] = useState<string | null>(null);
   const basemapAutoRef = useRef(true);
+  const titleRef = useRef<InputRef>(null);
 
   const tripQuery = useQuery({ queryKey: ["trip", tripId], queryFn: () => api.getTrip(tripId), enabled: !!tripId });
   const configQuery = useQuery({ queryKey: ["public-config"], queryFn: api.publicConfig });
@@ -204,10 +206,19 @@ export default function WorkspacePage() {
   const mutateTrip = (task: () => Promise<TripDetail>) => run(task, applyTrip);
 
   const patchTitle = async () => {
-    if (!trip || titleDraft === null || titleDraft.trim() === trip.title) return;
-    await mutateTrip(() => api.patchTrip(trip.id, trip.revision, { title: titleDraft.trim() })).catch((error) =>
-      notify.error(errorText(error)),
-    );
+    if (!trip || titleDraft === null) return;
+    const nextTitle = titleDraft.trim();
+    if (!nextTitle) {
+      setTitleDraft(trip.title);
+      notify.warning("行程名称不能为空");
+      return;
+    }
+    if (nextTitle === trip.title) return;
+    await mutateTrip(() => api.patchTrip(trip.id, trip.revision, { title: nextTitle })).catch((error) => {
+      // 保存失败时把输入框还原到服务端当前标题，避免界面显示一个并未落库的名字
+      setTitleDraft(trip.title);
+      notify.error(errorText(error));
+    });
   };
 
   const reorder = async (dayId: string, orderedIds: string[]) => {
@@ -797,16 +808,45 @@ export default function WorkspacePage() {
         }
       >
         {mobileSwitch}
-        <Input
-          size="small"
-          variant="borderless"
-          value={titleDraft ?? trip.title}
-          onChange={(event) => setTitleDraft(event.target.value)}
-          onBlur={patchTitle}
-          onPressEnter={patchTitle}
-          className="title-input"
-        />
-        <span className="rev">{dayLabel}</span>
+        {/* 标题是可直接编辑的输入框；日期范围放到下一行，避免看起来像面包屑或统计信息 */}
+        <div className="trip-heading">
+          <div className="trip-title-row">
+            <Input
+              ref={titleRef}
+              size="small"
+              variant="borderless"
+              value={titleDraft ?? trip.title}
+              onChange={(event) => setTitleDraft(event.target.value)}
+              onBlur={patchTitle}
+              onPressEnter={patchTitle}
+              onFocus={(event) => event.currentTarget.select()}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setTitleDraft(trip.title);
+                  event.currentTarget.blur();
+                }
+              }}
+              className="title-input"
+              maxLength={120}
+              aria-label="行程名称"
+              title="点击修改行程名称，Enter 保存，Esc 取消"
+            />
+            <Tooltip title="重命名行程">
+              <button
+                type="button"
+                className="title-edit-btn"
+                aria-label="重命名行程"
+                onClick={() => {
+                  titleRef.current?.focus();
+                  titleRef.current?.select();
+                }}
+              >
+                <IconEdit width={13} height={13} />
+              </button>
+            </Tooltip>
+          </div>
+          <span className="trip-date-range">{dayLabel}</span>
+        </div>
       </TopBar>
 
       <div

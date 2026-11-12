@@ -43,6 +43,14 @@ export const IconPlus = (p: Props) => (
   </svg>
 );
 
+/** 重命名入口：铅笔图标，和标题输入框配合使用 */
+export const IconEdit = (p: Props) => (
+  <svg {...base(p)}>
+    <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" />
+    <path d="M13.5 6.5l3 3" />
+  </svg>
+);
+
 export const IconMinus = (p: Props) => (
   <svg {...base(p)}>
     <path d="M5 12h14" />

@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, DatePicker, Dropdown, Empty, Form, Input, Spin, Typography } from "antd";
 import DragModal from "../components/DragModal";
-import { PlusOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
-import { api } from "../api/api";
+import { api, type TripSummary } from "../api/api";
 import { errorText } from "../api/client";
 import { notify } from "../lib/notify";
 import TopBar from "../components/TopBar";
@@ -15,6 +15,9 @@ export default function TripsPage() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm<{ title: string; range: [Dayjs, Dayjs] }>();
+  // 列表页重命名：不进入工作台也能改标题，移动端也有明确入口
+  const [renameTrip, setRenameTrip] = useState<TripSummary | null>(null);
+  const [renameForm] = Form.useForm<{ title: string }>();
 
   const trips = useQuery({ queryKey: ["trips"], queryFn: api.listTrips });
 
@@ -52,6 +55,19 @@ export default function TripsPage() {
     onError: (error) => notify.error(errorText(error)),
   });
 
+  const rename = useMutation({
+    mutationFn: (values: { trip: TripSummary; title: string }) =>
+      api.patchTrip(values.trip.id, values.trip.revision, { title: values.title.trim() }),
+    onSuccess: (trip) => {
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["trip", trip.id] });
+      setRenameTrip(null);
+      renameForm.resetFields();
+      notify.success("行程已重命名");
+    },
+    onError: (error) => notify.error(errorText(error)),
+  });
+
   return (
     <div className="workspace">
       <TopBar actions={<Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setOpen(true)}>新建行程</Button>} />
@@ -79,11 +95,16 @@ export default function TripsPage() {
                       trigger={["click"]}
                       menu={{
                         items: [
+                          { key: "rename", label: "重命名", icon: <EditOutlined /> },
                           { key: "clone", label: "复制行程" },
                           { key: "delete", label: <span style={{ color: "#cf1322" }}>删除</span> },
                         ],
                         onClick: ({ key, domEvent }) => {
                           domEvent.stopPropagation();
+                          if (key === "rename") {
+                            setRenameTrip(trip);
+                            renameForm.setFieldsValue({ title: trip.title });
+                          }
                           if (key === "clone") clone.mutate(trip.id);
                           if (key === "delete") remove.mutate(trip.id);
                         },
@@ -137,6 +158,51 @@ export default function TripsPage() {
           </Form.Item>
           <Form.Item name="range" label="日期范围" rules={[{ required: true }]}>
             <DatePicker.RangePicker style={{ width: "100%" }} />
+          </Form.Item>
+        </Form>
+      </DragModal>
+
+      <DragModal
+        centered
+        title="重命名行程"
+        open={!!renameTrip}
+        onCancel={() => {
+          setRenameTrip(null);
+          renameForm.resetFields();
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setRenameTrip(null);
+              renameForm.resetFields();
+            }}
+          >
+            取消
+          </Button>,
+          <Button key="ok" type="primary" loading={rename.isPending} onClick={() => renameForm.submit()}>
+            保存
+          </Button>,
+        ]}
+        destroyOnHidden
+      >
+        <Form
+          form={renameForm}
+          layout="vertical"
+          requiredMark={false}
+          onFinish={(values) => {
+            if (renameTrip) rename.mutate({ trip: renameTrip, title: values.title });
+          }}
+        >
+          <Form.Item
+            name="title"
+            label="标题"
+            rules={[
+              { required: true, whitespace: true, message: "请输入行程名称" },
+              { max: 120, message: "行程名称最多 120 个字符" },
+            ]}
+          >
+            <Input placeholder="例如：杭州三日" maxLength={120} autoFocus />
           </Form.Item>
         </Form>
       </DragModal>
