@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+<title id="title">E · 指南针</title><desc id="desc">四向罗盘与弯曲路线结合，以负空间形成面向目的地的方向感。</desc>
+<defs><mask id="path-e"><rect width="256" height="256" fill="white"/><path d="M112 190C106 166 149 164 149 141C149 123 108 125 112 105L130 72" fill="none" stroke="black" stroke-width="14" stroke-linecap="round"/><circle cx="130" cy="72" r="10" fill="black"/></mask></defs><g mask="url(#path-e)"><path d="M119 31Q128 15 137 31L164 89L223 119Q239 128 223 137L165 164L137 223Q128 239 119 223L90 165L33 137Q17 128 33 119L89 90Z" fill="#D86E56"/><path d="M119 31Q128 15 137 31L164 89L128 109L90 90Z" fill="#293D50"/></g>
+</svg>

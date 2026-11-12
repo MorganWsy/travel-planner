@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+<title id="title">D · 丝带路线</title><desc id="desc">连续的圆角路线折回成流畅的丝带，两个留白途经点使起终点清晰。</desc>
+<defs><mask id="nodes-d"><rect width="256" height="256" fill="white"/><circle cx="46" cy="55" r="9" fill="black"/><circle cx="57" cy="193" r="9" fill="black"/></mask></defs><g fill="none" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" mask="url(#nodes-d)"><path d="M46 55C46 81 67 102 95 102H162C191 102 211 121 211 147C211 173 191 193 162 193H57" stroke="#3566D9"/><path d="M162 102C191 102 211 121 211 147C211 173 191 193 162 193H126" stroke="#8261C8"/></g>
+</svg>

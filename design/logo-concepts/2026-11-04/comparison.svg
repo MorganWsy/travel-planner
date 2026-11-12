@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1320" viewBox="0 0 1800 1320">
+<rect width="1800" height="1320" fill="#F4F5F2"/>
+<g font-family="Microsoft YaHei, sans-serif">
+<text x="80" y="74" fill="#6C7B7C" font-size="18" letter-spacing="4">TRAVEL PLANNER / LOGO EXPLORATIONS</text>
+<text x="76" y="149" fill="#1E353E" font-size="54" font-weight="700">旅程，从一个好标志开始</text>
+<text x="80" y="193" fill="#7A878A" font-size="21">六个独立视觉方向 · 无文字图形标志 · SVG 矢量原稿</text>
+<text x="1718" y="81" fill="#7A878A" font-size="18" text-anchor="end">01 — 06</text>
+
+<rect x="80" y="244" width="520" height="410" rx="24" fill="white" stroke="#E4E8E4" stroke-width="1.5"/>
+<text x="110" y="288" fill="#8B9798" font-size="17" font-weight="700">A</text>
+<g transform="translate(244 286) scale(.75)"><defs><mask id="board-route-a"><rect width="256" height="256" fill="white"/><path d="M54 151L89 136L129 152Q141 157 148 143L180 112L202 122" fill="none" stroke="black" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+<g mask="url(#board-route-a)"><path d="M39 70L88 48V181L42 202Q24 210 24 191V89Q24 77 39 70Z" fill="#0F766E"/><path d="M88 48L162 76V208L88 181Z" fill="#14A69A"/><path d="M162 76L214 53Q232 45 232 64V172Q232 184 218 190L162 208Z" fill="#0F766E"/></g><circle cx="202" cy="122" r="13" fill="#F17456"/></g>
+<text x="112" y="544" fill="#243C45" font-size="28" font-weight="700">折叠地图</text>
+<text x="112" y="581" fill="#7E8B8D" font-size="18">几何折面 · 路线串联</text>
+<circle cx="120" cy="618" r="7" fill="#0F766E"/>
+<circle cx="145" cy="618" r="7" fill="#14A69A"/>
+<circle cx="170" cy="618" r="7" fill="#F17456"/>
+<text x="558" y="621" fill="#A0AAAC" font-size="13" text-anchor="end">CONCEPT A</text>
+<rect x="640" y="244" width="520" height="410" rx="24" fill="white" stroke="#E4E8E4" stroke-width="1.5"/>
+<text x="670" y="288" fill="#8B9798" font-size="17" font-weight="700">B</text>
+<g transform="translate(804 286) scale(.75)"><defs><mask id="board-route-b"><rect width="256" height="256" fill="white"/><path d="M91 224C82 194 86 170 111 150L139 128" fill="none" stroke="black" stroke-width="20" stroke-linecap="round"/></mask></defs>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round" mask="url(#board-route-b)"><path d="M48 187C20 174 23 142 48 120C66 105 73 82 94 65C119 45 153 48 180 68C205 87 225 114 224 143C223 172 201 194 174 202C132 216 82 205 48 187Z" stroke="#17664F" stroke-width="18"/><path d="M70 165C52 157 59 138 77 123C94 109 93 91 112 83C134 73 154 81 172 97C190 113 203 137 192 155C175 183 108 183 70 165Z" stroke="#59B79A" stroke-width="17"/><path d="M100 143C87 136 107 116 119 109C133 100 154 115 163 130C177 153 122 158 100 143Z" stroke="#17664F" stroke-width="16"/></g><circle cx="139" cy="128" r="9" fill="#59B79A"/></g>
+<text x="672" y="544" fill="#243C45" font-size="28" font-weight="700">等高线</text>
+<text x="672" y="581" fill="#7E8B8D" font-size="18">地形轮廓 · 探索路径</text>
+<circle cx="680" cy="618" r="7" fill="#17664F"/>
+<circle cx="705" cy="618" r="7" fill="#59B79A"/>
+<text x="1118" y="621" fill="#A0AAAC" font-size="13" text-anchor="end">CONCEPT B</text>
+<rect x="1200" y="244" width="520" height="410" rx="24" fill="white" stroke="#E4E8E4" stroke-width="1.5"/>
+<text x="1230" y="288" fill="#8B9798" font-size="17" font-weight="700">C</text>
+<g transform="translate(1364 286) scale(.75)"><defs><mask id="board-river-c"><rect width="256" height="256" fill="white"/><path d="M107 211C159 195 162 178 141 163C123 150 116 143 130 130L143 118" fill="none" stroke="black" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></mask></defs><circle cx="180" cy="67" r="25" fill="#F3A340"/><path d="M28 181L98 64Q106 51 115 66L159 137L178 108Q186 96 194 110L232 180Q241 196 223 196H37Q19 196 28 181Z" fill="#234D68" mask="url(#board-river-c)"/></g>
+<text x="1232" y="544" fill="#243C45" font-size="28" font-weight="700">山水日出</text>
+<text x="1232" y="581" fill="#7E8B8D" font-size="18">山峰日出 · 向远方出发</text>
+<circle cx="1240" cy="618" r="7" fill="#234D68"/>
+<circle cx="1265" cy="618" r="7" fill="#F3A340"/>
+<text x="1678" y="621" fill="#A0AAAC" font-size="13" text-anchor="end">CONCEPT C</text>
+<rect x="80" y="694" width="520" height="410" rx="24" fill="white" stroke="#E4E8E4" stroke-width="1.5"/>
+<text x="110" y="738" fill="#8B9798" font-size="17" font-weight="700">D</text>
+<g transform="translate(244 736) scale(.75)"><defs><mask id="board-nodes-d"><rect width="256" height="256" fill="white"/><circle cx="46" cy="55" r="9" fill="black"/><circle cx="57" cy="193" r="9" fill="black"/></mask></defs><g fill="none" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" mask="url(#board-nodes-d)"><path d="M46 55C46 81 67 102 95 102H162C191 102 211 121 211 147C211 173 191 193 162 193H57" stroke="#3566D9"/><path d="M162 102C191 102 211 121 211 147C211 173 191 193 162 193H126" stroke="#8261C8"/></g></g>
+<text x="112" y="994" fill="#243C45" font-size="28" font-weight="700">丝带路线</text>
+<text x="112" y="1031" fill="#7E8B8D" font-size="18">连续路线 · 灵活编排行程</text>
+<circle cx="120" cy="1068" r="7" fill="#3566D9"/>
+<circle cx="145" cy="1068" r="7" fill="#8261C8"/>
+<text x="558" y="1071" fill="#A0AAAC" font-size="13" text-anchor="end">CONCEPT D</text>
+<rect x="640" y="694" width="520" height="410" rx="24" fill="white" stroke="#E4E8E4" stroke-width="1.5"/>
+<text x="670" y="738" fill="#8B9798" font-size="17" font-weight="700">E</text>
+<g transform="translate(804 736) scale(.75)"><defs><mask id="board-path-e"><rect width="256" height="256" fill="white"/><path d="M112 190C106 166 149 164 149 141C149 123 108 125 112 105L130 72" fill="none" stroke="black" stroke-width="14" stroke-linecap="round"/><circle cx="130" cy="72" r="10" fill="black"/></mask></defs><g mask="url(#board-path-e)"><path d="M119 31Q128 15 137 31L164 89L223 119Q239 128 223 137L165 164L137 223Q128 239 119 223L90 165L33 137Q17 128 33 119L89 90Z" fill="#D86E56"/><path d="M119 31Q128 15 137 31L164 89L128 109L90 90Z" fill="#293D50"/></g></g>
+<text x="672" y="994" fill="#243C45" font-size="28" font-weight="700">指南针</text>
+<text x="672" y="1031" fill="#7E8B8D" font-size="18">方向定位 · 清楚知道去哪</text>
+<circle cx="680" cy="1068" r="7" fill="#D86E56"/>
+<circle cx="705" cy="1068" r="7" fill="#293D50"/>
+<text x="1118" y="1071" fill="#A0AAAC" font-size="13" text-anchor="end">CONCEPT E</text>
+<rect x="1200" y="694" width="520" height="410" rx="24" fill="white" stroke="#E4E8E4" stroke-width="1.5"/>
+<text x="1230" y="738" fill="#8B9798" font-size="17" font-weight="700">F</text>
+<g transform="translate(1364 736) scale(.75)"><path d="M52 32H113V90Q113 104 99 104H32V52Q32 32 52 32Z" fill="#255C80"/><path d="M137 32H203Q224 32 224 53V120H170V99Q170 90 161 90H137Z" fill="#6EC7AF"/><path d="M32 128H89Q104 128 104 143V163Q104 176 118 176H135V224H53Q32 224 32 203Z" fill="#6EC7AF"/><path d="M128 115H145Q160 115 160 130V145H224V202Q224 224 202 224H159V166Q159 153 146 153H128Z" fill="#255C80"/><circle cx="117" cy="119" r="8" fill="#255C80"/></g>
+<text x="1232" y="994" fill="#243C45" font-size="28" font-weight="700">地图拼片</text>
+<text x="1232" y="1031" fill="#7E8B8D" font-size="18">组合目的地 · 拼出自己的旅程</text>
+<circle cx="1240" cy="1068" r="7" fill="#255C80"/>
+<circle cx="1265" cy="1068" r="7" fill="#6EC7AF"/>
+<text x="1678" y="1071" fill="#A0AAAC" font-size="13" text-anchor="end">CONCEPT F</text>
+<text x="80" y="1214" fill="#677B7D" font-size="20">选择方向后，可继续细化平台字标、单色版与应用图标。</text><text x="1720" y="1214" text-anchor="end" fill="#8B9798" font-size="17">2026.11.04</text></g></svg>

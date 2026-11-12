@@ -1,0 +1,69 @@
+[
+  {
+    "id": "A",
+    "file": "a-folded-map",
+    "name": "折叠地图",
+    "caption": "几何折面 · 路线串联",
+    "colors": [
+      "#0F766E",
+      "#14A69A",
+      "#F17456"
+    ],
+    "description": "折叠地图通过负空间路线串联，终点以暖色圆点强调。"
+  },
+  {
+    "id": "B",
+    "file": "b-terrain-contours",
+    "name": "等高线",
+    "caption": "地形轮廓 · 探索路径",
+    "colors": [
+      "#17664F",
+      "#59B79A"
+    ],
+    "description": "三层等高线围合山地，以断开的轮廓形成进入地形的路径。"
+  },
+  {
+    "id": "C",
+    "file": "c-mountain-sunrise",
+    "name": "山水日出",
+    "caption": "山峰日出 · 向远方出发",
+    "colors": [
+      "#234D68",
+      "#F3A340"
+    ],
+    "description": "山峰、日出和蜿蜒的负空间水路融合，呈现亲近自然的旅行气质。"
+  },
+  {
+    "id": "D",
+    "file": "d-journey-ribbon",
+    "name": "丝带路线",
+    "caption": "连续路线 · 灵活编排行程",
+    "colors": [
+      "#3566D9",
+      "#8261C8"
+    ],
+    "description": "连续的圆角路线折回成流畅的丝带，两个留白途经点使起终点清晰。"
+  },
+  {
+    "id": "E",
+    "file": "e-compass-route",
+    "name": "指南针",
+    "caption": "方向定位 · 清楚知道去哪",
+    "colors": [
+      "#D86E56",
+      "#293D50"
+    ],
+    "description": "四向罗盘与弯曲路线结合，以负空间形成面向目的地的方向感。"
+  },
+  {
+    "id": "F",
+    "file": "f-map-mosaic",
+    "name": "地图拼片",
+    "caption": "组合目的地 · 拼出自己的旅程",
+    "colors": [
+      "#255C80",
+      "#6EC7AF"
+    ],
+    "description": "不等形的地图片区彼此咬合，片区之间的道路留白承载行程与图层的概念。"
+  }
+]

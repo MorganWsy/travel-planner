@@ -1,0 +1,152 @@
+{
+  "_note": [
+    "本文件定义供应商数据在各类用途下的状态：allowed / denied / unknown。unknown 不等于允许。",
+    "2026-11-03 的状态来自公开文档与用户截图，没有用项目 Key 实测；因此没有任何一项被标为 allowed 持久化。",
+    "display 允许的是“本次会话内在地图上查看搜索结果”，不进入数据库、历史、分享或导出。",
+    "persist=unknown 时，保存行为是“用户复制的最小字段 + 来源说明”，不保存 provider_id 与原始响应。",
+    "retain_reference=allowed 允许用户把看到的耗时手工记为参考值，必须带 attribution。",
+    "取得书面授权后，把对应项改成 allowed 并在此记录 evidence_ref 与有效期。",
+    "2026-11-10 新增 route_bicycling / route_electrobike，接口已用项目 Key 实测可用（见 docs/PROVIDER_RESEARCH.md#7），但用途状态沿用 route_walking：persist 仍为 unknown，不据此放宽保存/分享/导出。"
+  ],
+  "amap": {
+    "search": {
+      "display_on_custom_map": "allowed",
+      "persist": "unknown",
+      "share": "denied",
+      "export": "denied",
+      "offline": "denied",
+      "retain_reference": "allowed",
+      "compute": "allowed",
+      "allowed_fields": [
+        "name",
+        "category",
+        "location"
+      ],
+      "attribution": "高德地图",
+      "evidence_ref": "docs/PROVIDER_RESEARCH.md#4"
+    },
+    "geocode": {
+      "display_on_custom_map": "allowed",
+      "persist": "unknown",
+      "share": "denied",
+      "export": "denied",
+      "offline": "denied",
+      "retain_reference": "allowed",
+      "compute": "allowed",
+      "allowed_fields": [
+        "formatted_address",
+        "location"
+      ],
+      "attribution": "高德地图",
+      "evidence_ref": "docs/PROVIDER_RESEARCH.md#4"
+    },
+    "route_driving": {
+      "display_on_custom_map": "allowed",
+      "persist": "unknown",
+      "share": "denied",
+      "export": "denied",
+      "offline": "denied",
+      "retain_reference": "allowed",
+      "compute": "allowed",
+      "allowed_fields": [
+        "distance",
+        "duration"
+      ],
+      "attribution": "高德地图",
+      "evidence_ref": "docs/PROVIDER_RESEARCH.md#4"
+    },
+    "route_walking": {
+      "display_on_custom_map": "allowed",
+      "persist": "unknown",
+      "share": "denied",
+      "export": "denied",
+      "offline": "denied",
+      "retain_reference": "allowed",
+      "compute": "allowed",
+      "allowed_fields": [
+        "distance",
+        "duration"
+      ],
+      "attribution": "高德地图",
+      "evidence_ref": "docs/PROVIDER_RESEARCH.md#4"
+    },
+    "route_transit": {
+      "display_on_custom_map": "allowed",
+      "persist": "unknown",
+      "share": "denied",
+      "export": "denied",
+      "offline": "denied",
+      "retain_reference": "allowed",
+      "compute": "denied",
+      "allowed_fields": [
+        "duration",
+        "segments"
+      ],
+      "attribution": "高德地图",
+      "evidence_ref": "docs/PROVIDER_RESEARCH.md#4"
+    },
+    "route_bicycling": {
+      "display_on_custom_map": "allowed",
+      "persist": "unknown",
+      "share": "denied",
+      "export": "denied",
+      "offline": "denied",
+      "retain_reference": "allowed",
+      "compute": "allowed",
+      "allowed_fields": [
+        "distance",
+        "duration"
+      ],
+      "attribution": "高德地图",
+      "evidence_ref": "docs/PROVIDER_RESEARCH.md#7"
+    },
+    "route_electrobike": {
+      "display_on_custom_map": "allowed",
+      "persist": "unknown",
+      "share": "denied",
+      "export": "denied",
+      "offline": "denied",
+      "retain_reference": "allowed",
+      "compute": "allowed",
+      "allowed_fields": [
+        "distance",
+        "duration"
+      ],
+      "attribution": "高德地图",
+      "evidence_ref": "docs/PROVIDER_RESEARCH.md#7"
+    }
+  },
+  "tianditu": {
+    "search": {
+      "display_on_custom_map": "allowed",
+      "persist": "unknown",
+      "share": "denied",
+      "export": "denied",
+      "offline": "denied",
+      "retain_reference": "allowed",
+      "compute": "allowed",
+      "allowed_fields": [
+        "name",
+        "address",
+        "lonlat"
+      ],
+      "attribution": "天地图",
+      "evidence_ref": "docs/PROVIDER_RESEARCH.md#4"
+    },
+    "geocode": {
+      "display_on_custom_map": "allowed",
+      "persist": "unknown",
+      "share": "denied",
+      "export": "denied",
+      "offline": "denied",
+      "retain_reference": "allowed",
+      "compute": "allowed",
+      "allowed_fields": [
+        "formatted_address",
+        "location"
+      ],
+      "attribution": "天地图",
+      "evidence_ref": "docs/PROVIDER_RESEARCH.md#4"
+    }
+  }
+}

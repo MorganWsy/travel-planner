@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+<title id="title">A · 折叠地图</title><desc id="desc">折叠地图通过负空间路线串联，终点以暖色圆点强调。</desc>
+<defs><mask id="route-a"><rect width="256" height="256" fill="white"/><path d="M54 151L89 136L129 152Q141 157 148 143L180 112L202 122" fill="none" stroke="black" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+<g mask="url(#route-a)"><path d="M39 70L88 48V181L42 202Q24 210 24 191V89Q24 77 39 70Z" fill="#0F766E"/><path d="M88 48L162 76V208L88 181Z" fill="#14A69A"/><path d="M162 76L214 53Q232 45 232 64V172Q232 184 218 190L162 208Z" fill="#0F766E"/></g><circle cx="202" cy="122" r="13" fill="#F17456"/>
+</svg>

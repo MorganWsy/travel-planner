@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+<title id="title">B · 等高线</title><desc id="desc">三层等高线围合山地，以断开的轮廓形成进入地形的路径。</desc>
+<defs><mask id="route-b"><rect width="256" height="256" fill="white"/><path d="M91 224C82 194 86 170 111 150L139 128" fill="none" stroke="black" stroke-width="20" stroke-linecap="round"/></mask></defs>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round" mask="url(#route-b)"><path d="M48 187C20 174 23 142 48 120C66 105 73 82 94 65C119 45 153 48 180 68C205 87 225 114 224 143C223 172 201 194 174 202C132 216 82 205 48 187Z" stroke="#17664F" stroke-width="18"/><path d="M70 165C52 157 59 138 77 123C94 109 93 91 112 83C134 73 154 81 172 97C190 113 203 137 192 155C175 183 108 183 70 165Z" stroke="#59B79A" stroke-width="17"/><path d="M100 143C87 136 107 116 119 109C133 100 154 115 163 130C177 153 122 158 100 143Z" stroke="#17664F" stroke-width="16"/></g><circle cx="139" cy="128" r="9" fill="#59B79A"/>
+</svg>
