@@ -36,7 +36,7 @@ Vite dev server ── /api 代理 ──► Uvicorn :8007 ── SQLAlchemy ─
 
 ### 2.2 目标部署（尚未落地）
 
-`IMPLEMENTATION_PLAN.md` 规划的是同域 Nginx + API + Worker + PostgreSQL/PostGIS + Redis/RQ + 私有文件存储。当前 `infra/` 为空，没有 Compose、Nginx、Redis/RQ 或 Alembic 迁移。
+`IMPLEMENTATION_PLAN.md` 规划的是同域 Nginx + API + Worker + PostgreSQL/PostGIS + Redis/RQ + 私有文件存储。当前 `infra/` 为空，没有 Compose、Nginx、Redis/RQ；Alembic 已建立 `0001_initial` 基线。
 
 容器化建议顺序：先容器化 PostgreSQL/PostGIS 测试库，拿到可重复的集成测试环境；再补 API/Web 服务；Redis/RQ 等任务队列真正替换时再加。保留现有 `dev.cmd` 的本机开发方式，不强制所有人用容器。
 
@@ -399,7 +399,7 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 | --- | --- |
 | 找回密码 | 未实现 |
 | Redis/RQ + 独立 Worker | 未实现；线程池 + jobs 表替代 |
-| Alembic 迁移 | 未实现；`scripts/init_db.py` 建表 |
+| Alembic 迁移 | 已有 `0001_initial` 基线；`scripts/init_db.py` 仍用于本地快速建表 |
 | Docker Compose / Nginx | 未实现；`infra/` 为空 |
 | GeoJSON/GPX/KML/Shapefile/GeoPackage 完整导入 | 仅 CSV/GeoJSON 点导入 + 轻量专题图层 |
 | GeoTIFF/DEM、MVT、地形、TiTiler | 未实现 |
@@ -476,7 +476,9 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 - 默认导入改为 `import * as maplibregl from "maplibre-gl"`；`LngLatBounds` 仍命名导入，`Map` 类型改为 `import type`。
 - `setPaintProperty(..., null)` 改为 `undefined`，兼容 v6 更严格的类型；运行时行为仍是复位为样式默认值。
 - 地图初始化捕获 `GPUInitializationError`，WebGL2 不可用时在画布位置显示明确降级提示，日程、时间线和攻略不受影响。
-- 真实无头 Edge 冒烟：工作台地图画布 812×713，`webgl2=true`，未出现降级层，控制台无 error/warning。
+- Vite 预构建会改写 MapLibre 6 的默认 worker URL，导致 GeoJSON 解析线程起不来、标注和连线全部空白；改用 `maplibre-gl-worker.mjs?worker&url` 并在地图创建前 `setWorkerUrl`，生产构建单独产出 519.18KB worker 资源。
+- 绘制失败不再静默吞掉：等 `isStyleLoaded()` 为真再绘制，失败时通过 `styledata` / `load` 重试；`ensureSource` 在 source 已存在但 layer 缺失时会补建 layer。
+- 真实无头 Edge 冒烟：工作台地图画布 812×713，`webgl2=true`，图层齐全，`places` 源 32 个要素，截图可见标注与示意连线，控制台无 error/warning。
 
 **第 4 步：后端依赖（2026-11-12）**
 
@@ -494,13 +496,14 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 | peer 依赖 | `pnpm peers check` | 无问题 |
 | 类型检查 | `pnpm typecheck`（TS 7.0.2） | 0 错 |
 | 生产构建 | `pnpm build`（Vite 8.3.8 / Rolldown） | 通过，约 0.8s |
-| 产物体积 | `dist/assets` | react 257.76KB、antd 993.82KB、maplibre 1,076.79KB、WorkspacePage 95.70KB、index 89.38KB |
+| 产物体积 | `dist/assets` | react 257.76KB、antd 993.82KB、maplibre 1,076.88KB、maplibre worker 519.18KB、WorkspacePage 95.86KB、index 89.72KB |
 | 后端依赖一致性 | `pip check` | No broken requirements found |
 | 后端完整测试 | `TEST_DATABASE_URL` → `pytest tests -q` | 32 passed |
 | 后端启动 | uvicorn 0.54，临时 `:8008` 的 health/config | 均返回 200 |
+| Alembic 基线 | `upgrade head` → `check` → `downgrade base` → `upgrade head` | 通过，`No new upgrade operations detected` |
 | OpenAPI 类型生成 | `scripts/gen_openapi.py` + `pnpm codegen:api` | 成功，业务类型无变化 |
 | 桌面冒烟 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 → 攻略 → 导出 MD | 正常，控制台无 error/warning |
-| MapLibre 6 | 工作台地图初始化 | 画布 812×713、WebGL2 可用、无降级提示、无 console error |
+| MapLibre 6 | 工作台地图初始化 | 画布 812×713、WebGL2 可用、`places` 源 32 个要素、标注与连线可见、无降级提示、无 console error |
 | 历史页 | 版本列表、快照详情、表格 | 正常，表格字号 13px |
 | 设置页 | 地图数据源、外观、登录会话表格、Popconfirm | 正常 |
 | 分享弹窗 | 有效期 Select、密码 Input、原生 checkbox | 正常，Modal 内边距 10px 12px |
@@ -519,7 +522,7 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 | Node / pnpm | 22.18.0 / 11.1.0 | Node 24 LTS、pnpm 12 可选；升级 pnpm 会改锁文件格式 |
 | Docker | 未安装 | 建议先补 PostgreSQL/PostGIS Compose，再补 API/Web |
 | WSL | 安装包已下载，未安装 | `C:\Users\wsy\Downloads\wsl.3.0.3.0.x64.msi`；Docker Desktop 需要它 |
-| Alembic | 1.20.1 已安装，未建基线 | 上线前用当前模型生成 `0001_initial` |
+| Alembic | 1.20.1，已建 `0001_initial` 并验证 upgrade/downgrade/check | 后续 schema 变更新增 revision；CI 运行 `alembic check` |
 
 Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当前测试仍通过，暂不引入额外依赖。
 
@@ -529,7 +532,7 @@ Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当
 
 已实现一条可运行的纵向闭环：注册登录 → 建行程 → 建/导地点 → 排事项 → 看时间线与冲突 → 手工或真实路线 → 单日优化预览并应用 → 版本历史与恢复 → 攻略导出（MD/DOCX）→ 分享只读页。
 
-未实现：找回密码、Redis/RQ、Alembic 迁移、Docker Compose/Nginx、GIS 栅格与矢量瓦片、地形与三维、外部图层服务、PWA 离线、多日优化、OR-Tools、附件与图片、原生 App 与 Electron。邮箱验证码与可选 SMTP 已实现（未配 SMTP 时验证码写日志）；分享页当前只展示攻略快照，不包含地图图层。
+未实现：找回密码、Redis/RQ、Docker Compose/Nginx、GIS 栅格与矢量瓦片、地形与三维、外部图层服务、PWA 离线、多日优化、OR-Tools、附件与图片、原生 App 与 Electron。邮箱验证码与可选 SMTP 已实现（未配 SMTP 时验证码写日志）；分享页当前只展示攻略快照，不包含地图图层。
 
 判定标准遵循 `AGENTS.md`：不把“页面能打开”“接口返回 200”当作完成；每个能力在 `/api/v1/providers/capabilities` 中标注 configured/verified，未实测项不宣称可用。
 
@@ -554,7 +557,7 @@ Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当
 | 供应商持久化 | 按用途矩阵 | 默认 persist=unknown，仅存用户复制字段 | 无授权证据 |
 | 优化器 | OR-Tools | 2-opt / Or-opt 启发式 | OR-Tools 未安装且 Python 3.13 轮子不确定；方案只承诺可行/限时改进 |
 | PWA | vite-plugin-pwa + Workbox | 未实现 | 优先级低于核心闭环 |
-| 数据库迁移 | Alembic | `scripts/init_db.py` 建表 | 开发期够用；上线前补 Alembic 基线 |
+| 数据库迁移 | Alembic | 已补 `0001_initial`；本地 `init_db.py` 仍可建表 | 部署用 `alembic upgrade head`；后续变更新增 revision |
 | 前端 React | React 19 | React 19.3.1 | 2026-11-12 已对齐 |
 
 ### 10.4 安全与数据权利边界
@@ -579,7 +582,7 @@ Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当
 | Python 依赖一致性 | `pip check` | No broken requirements found |
 | 前端 peer 依赖 | `pnpm peers check` | 无问题 |
 | 前端类型检查 | `pnpm typecheck` | 0 错 |
-| 前端构建 | `pnpm build` | 通过；react 257.76KB、antd 993.82KB、maplibre 1,076.79KB |
+| 前端构建 | `pnpm build` | 通过；react 257.76KB、antd 993.82KB、maplibre 1,076.88KB + worker 519.18KB |
 | 开发服务器 | `pnpm dev --host 127.0.0.1` | Vite 8.3.8 启动，登录页正常 |
 | 生产构建托管 | FastAPI 托管 `dist`，访问 `:8007` | 登录页与静态资源正常，无 pageerror |
 | 登录后主流程 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 | 正常；地图画布 812×713；无 pageerror |
@@ -608,12 +611,12 @@ Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当
 ### 10.7 遗留项与推进顺序
 
 1. **P0 剩余**：用项目 Key 逐项实测搜索/地理编码/驾车/步行/公交/天气，把 `verified` 改为 true 并记录 QPS 与允许用途。
-2. **Alembic 基线迁移**：用当前模型生成 `0001_initial`，CI 检查 `alembic check`；`init_db.py` 仅用于本地。
+2. **迁移流程**：`0001_initial` 已建立并验证；后续 schema 变更必须新增 revision，CI 运行 `alembic check`。
 3. **P2 补全**：输入提示去抖与旧请求取消、双源分组展示、`no-store` 全链路核查、公交城市上下文校验。
 4. **P3 扩展**：真实矩阵预算控制（每任务 400 段上限）、多日分配、冲突诊断文案。
 5. **P4 补全**：附件/图片、GeoPackage 与 Shapefile 预检、COG/DEM 与 TiTiler、PWA 离线攻略、分享页图层。
 6. **发布前**：SMTP 生产联调、HTTPS 与反向代理、备份恢复演练、日志脱敏审计。
-7. **技术栈**：前端与后端主要依赖升级已完成；剩余 Alembic 基线、Docker/WSL 与发布前联调。
+7. **技术栈**：前端与后端主要依赖升级已完成；剩余 Docker/WSL 与发布前联调。
 8. **容器化**：Docker 未安装，WSL 安装包已下载未安装；先补 PostgreSQL/PostGIS Compose，再 API/Web，Redis/RQ 最后加。
 
 ### 10.8 对原方案的修正意见
@@ -643,7 +646,7 @@ Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当
 
 ## 12. 已知技术债与风险
 
-1. **数据库迁移仍是 `create_all`**：只适合开发；上线前需要 Alembic 基线。Python 依赖已冻结到 `apps/api/requirements.lock.txt`。
+1. **迁移流程刚建立基线**：`apps/api/migrations/versions/0001_initial.py` 已验证 upgrade/downgrade；`scripts/init_db.py` 仍用 `create_all`，只适合本地快速开发。部署统一用 `alembic upgrade head`，后续模型变更必须生成新 revision。
 2. **任务队列是进程内线程池**：多副本、重启恢复和长任务隔离不足；换 RQ 是明确后续项。
 3. **限流是进程内**：多副本部署会失效，需要 Redis 等共享存储。
 4. **快照未包含图层**：分享/历史/导出看不到专题图层，和 API 契约中的 `TripDetail.map_layers` 有差异。

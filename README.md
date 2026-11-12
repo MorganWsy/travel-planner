@@ -54,6 +54,14 @@ apps\api\.venv\Scripts\python.exe scripts\init_db.py
 apps\api\.venv\Scripts\python.exe scripts\seed_demo.py   rem 可选：南昌三日示例
 ```
 
+`init_db.py` 只用于本地快速开发（`create_all`）。新建生产/测试库时优先用 Alembic 基线：
+
+```bat
+cd apps\api
+.venv\Scripts\alembic.exe upgrade head
+.venv\Scripts\alembic.exe check
+```
+
 Python 依赖基线已冻结在 `apps/api/requirements.lock.txt`（含全部传递依赖，2026-11-12 由 `pip freeze` 生成）。换机或重建 venv 时可用：
 
 ```bat
