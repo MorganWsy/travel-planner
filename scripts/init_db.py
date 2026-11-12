@@ -2,6 +2,8 @@
 
 只读 apps/api/.env 中的 DATABASE_URL，不需要在终端里输入密码，也不需要 psql。
 若目标数据库不存在，会先连到同一实例的 postgres 库创建它（需要该账号有 CREATEDB 权限）。
+这是本地开发/测试的快速入口，使用 SQLAlchemy create_all；
+生产或需要可回滚 schema 时改用 `alembic upgrade head`。
 
 用法：
     apps/api/.venv/Scripts/python.exe scripts/init_db.py

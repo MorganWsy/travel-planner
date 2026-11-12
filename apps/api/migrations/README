@@ -1,0 +1,20 @@
+# 数据库迁移
+
+Alembic 基线为 `versions/0001_initial.py`。数据库 URL 不在 `alembic.ini` 中保存，而是由
+`migrations/env.py` 读取 `DATABASE_URL` / `.env`。
+
+在 `apps/api` 目录执行：
+
+```bat
+.venv\Scripts\alembic.exe upgrade head
+.venv\Scripts\alembic.exe check
+.venv\Scripts\alembic.exe revision --autogenerate -m "describe change"
+.venv\Scripts\alembic.exe downgrade -1
+```
+
+约定：
+
+- 每次模型变更都新增一个 revision，不直接改历史 revision。
+- 提交前运行 `alembic check`，应输出 `No new upgrade operations detected.`。
+- 本地 `scripts/init_db.py` 仍可用 `create_all` 快速建表；生产环境统一用 `alembic upgrade head`。
+- 几何列由 GeoAlchemy2 自动创建 GIST 索引，迁移中不要重复 `create_index`。

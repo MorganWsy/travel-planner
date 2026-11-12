@@ -1,8 +1,8 @@
 """数据库会话与元数据。
 
-开发默认 SQLite（无需额外服务），生产通过 DATABASE_URL 切 PostgreSQL。
-为保持两套环境行为一致，模型层不使用 PostGIS 专有类型：几何以 GeoJSON（WGS84）存入 JSON 列，
-空间计算在服务层完成。PostGIS 迁移路径记录在 docs/ARCHITECTURE.md 第 10.7 节（Alembic 基线）。
+数据库连接从 DATABASE_URL / .env 读取；当前开发与测试均使用 PostgreSQL + PostGIS。
+几何列由 GeoAlchemy2 映射到 PostGIS geometry，业务层仍以 GeoJSON（WGS84）读写。
+迁移基线见 apps/api/migrations/versions/0001_initial.py，生产环境用 alembic upgrade head。
 """
 
 from __future__ import annotations

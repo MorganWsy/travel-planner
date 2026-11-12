@@ -23,7 +23,7 @@ WEB_DIST = PROJECT_ROOT / "apps" / "web" / "dist"
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # 开发环境直接建表；生产环境通过 scripts/init_db.py 或 Alembic 迁移后再启动。
+    # 开发环境直接建表；生产环境先执行 alembic upgrade head，不在启动时改 schema。
     if settings.app_env != "production":
         Base.metadata.create_all(bind=engine)
     # 把数据库中的 Key 覆盖到运行配置；失败不应阻止服务启动（页面会显示未配置）。
