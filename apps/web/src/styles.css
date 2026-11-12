@@ -6,8 +6,10 @@
    ============================================================ */
 
 :root {
-  --radius: 6px;
-  --radius-sm: 4px;
+  /* 全站统一圆角：矩形控件、卡片、弹窗、标签都使用同一个值。
+     头像、圆点这类真正的圆形元素单独使用 50%，不参与该变量。 */
+  --radius: 8px;
+  --radius-sm: 8px;
   --topbar-h: 48px;
   /* 字号层级：12 辅助 / 13 次要 / 14 正文 / 15 小标题 / 16 弹窗标题 / 18 页面标题。
      全站不再出现小于 12px 的字，11px 与 10px 已在本轮清掉。 */
@@ -189,7 +191,7 @@ html .ant-modal .ant-modal-title::before {
   flex: none;
   width: 3px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   background: var(--accent);
 }
 html .ant-modal .ant-modal-body {
@@ -201,7 +203,7 @@ html .ant-modal .ant-modal-footer {
 }
 html .ant-notification .ant-notification-notice {
   padding: 10px 12px !important;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 html .ant-notification .ant-notification-notice-title {
   font-size: var(--fs-14);
@@ -233,7 +235,7 @@ html .ant-notification .ant-notification-notice-close {
    原来的 .ant-message-notice-content 已不存在 */
 html .ant-message .ant-message-notice {
   padding: 8px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
 }
 /* 表格字号在 theme/antd.ts 的 Table.cellFontSize* token 中配置，不在 CSS 里覆盖 */
@@ -258,7 +260,7 @@ html .ant-message .ant-message-notice {
   padding: 26px 24px 22px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
   text-align: center;
 }
@@ -377,7 +379,7 @@ html .ant-message .ant-message-notice {
 
 /* 规划页顶栏的标题区：标题在上、日期范围在下。
    当前标题本来就是可编辑输入框，但 borderless 样式看起来像面包屑；
-   这里用更紧凑的输入框和铅笔按钮把“可重命名”表达出来。 */
+   这里用更紧凑的输入框和文本末尾的铅笔图标把“可重命名”表达出来。 */
 .trip-heading {
   display: flex;
   flex-direction: column;
@@ -387,14 +389,9 @@ html .ant-message .ant-message-notice {
   flex: 0 1 auto;
 }
 
-.trip-title-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
-}
-
-.title-input.ant-input {
+/* 带 suffix 时 AntD 把 className 放在 affix wrapper 上；两套 DOM 都覆盖 */
+.title-input.ant-input,
+.title-input.ant-input-affix-wrapper {
   height: 20px;
   padding: 0 4px;
   line-height: 20px;
@@ -403,17 +400,32 @@ html .ant-message .ant-message-notice {
 }
 
 .title-input.ant-input:hover,
-.title-input.ant-input:focus {
+.title-input.ant-input:focus,
+.title-input.ant-input-affix-wrapper:hover,
+.title-input.ant-input-affix-wrapper:focus-within {
   background: var(--panel-2);
 }
 
-.title-input.ant-input:focus {
+.title-input.ant-input:focus,
+.title-input.ant-input-affix-wrapper:focus-within {
   box-shadow: inset 0 0 0 1px var(--line);
 }
 
+/* affix wrapper 内部的 input 不再重复画背景 */
+.title-input.ant-input-affix-wrapper .ant-input {
+  height: 18px;
+  padding: 0;
+  line-height: 18px;
+  background: transparent;
+}
+
+.title-input.ant-input-affix-wrapper .ant-input-suffix {
+  margin-inline-start: 2px;
+}
+
 .title-edit-btn {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -471,6 +483,23 @@ html .ant-message .ant-message-notice {
   white-space: nowrap;
 }
 
+/* 退出确认：警告图标 + 一句话说明，图标不参与文字换行 */
+.logout-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--text);
+  font-size: var(--fs-14);
+  line-height: 1.6;
+}
+
+.logout-confirm-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--amber);
+}
+
 /* 顶栏图标按钮：全站同一尺寸，图标统一 16px */
 .icon-btn {
   width: 30px;
@@ -505,7 +534,7 @@ html .ant-message .ant-message-notice {
   height: 28px;
   padding: 0 6px 0 3px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: transparent;
   color: var(--text);
   cursor: pointer;
@@ -707,7 +736,7 @@ html .ant-message .ant-message-notice {
   flex: none;
   width: 3px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   background: var(--accent);
 }
 
@@ -747,7 +776,7 @@ html .ant-message .ant-message-notice {
 
 .panel-body::-webkit-scrollbar-thumb {
   background: var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 
 .panel-body::-webkit-scrollbar-track {
@@ -770,7 +799,7 @@ html .ant-message .ant-message-notice {
   margin-top: 0;
   padding: 8px 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--muted);
   font-size: var(--fs-13);
@@ -783,13 +812,13 @@ html .ant-message .ant-message-notice {
 .rail-tab.left {
   left: 0;
   border-left: 0;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
 }
 
 .rail-tab.right {
   right: 0;
   border-right: 0;
-  border-radius: 6px 0 0 6px;
+  border-radius: var(--radius) 0 0 var(--radius);
 }
 
 .rail-tab:hover {
@@ -819,7 +848,7 @@ html .ant-message .ant-message-notice {
 /* 测距读数：底色块 + 统一 12px，不用描边，缩放时字号也不变 */
 .measure-label {
   padding: 2px 6px;
-  border-radius: 5px;
+  border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(232, 89, 12, 0.35);
   color: #a83a00;
@@ -865,12 +894,12 @@ html .ant-message .ant-message-notice {
 .snap-ring::before {
   border-right-color: transparent;
   border-bottom-color: transparent;
-  border-radius: 4px 0 0 0;
+  border-radius: var(--radius) 0 0 0;
 }
 .snap-ring::after {
   border-left-color: transparent;
   border-top-color: transparent;
-  border-radius: 0 0 4px 0;
+  border-radius: 0 0 var(--radius) 0;
 }
 
 /* 搜索结果预览点：临时标记，加进行程后由正式标注取代 */
@@ -1007,11 +1036,11 @@ html .ant-message .ant-message-notice {
 }
 
 .map-btn-slot:first-child .map-btn {
-  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .map-btn-slot:last-child .map-btn {
-  border-radius: 0 0 calc(var(--radius) - 1px) calc(var(--radius) - 1px);
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .map-btn-slot + .map-btn-slot .map-btn {
@@ -1157,7 +1186,7 @@ html .ant-message .ant-message-notice {
 }
 .basemap-opacity input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   /* --fill 由 JSX 按当前值写入：已填充段与未填充段不同色，才看得出 70% */
   background: linear-gradient(to right, var(--accent) 0 var(--fill, 70%), var(--panel-3) var(--fill, 70%) 100%);
 }
@@ -1174,7 +1203,7 @@ html .ant-message .ant-message-notice {
 }
 .basemap-opacity input[type="range"]::-moz-range-track {
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   background: linear-gradient(to right, var(--accent) 0 var(--fill, 70%), var(--panel-3) var(--fill, 70%) 100%);
 }
 .basemap-opacity input[type="range"]::-moz-range-thumb {
@@ -1420,7 +1449,7 @@ html .ant-message .ant-message-notice {
   align-items: center;
   height: 16px;
   padding: 0 6px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel-3);
   color: var(--muted);
   font-size: 12px;
@@ -1445,7 +1474,7 @@ html .ant-message .ant-message-notice {
 }
 .layer-detail-opacity input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   background: linear-gradient(to right, var(--accent) 0 var(--fill, 100%), var(--panel-3) var(--fill, 100%) 100%);
 }
 .layer-detail-opacity input[type="range"]::-webkit-slider-thumb {
@@ -1461,7 +1490,7 @@ html .ant-message .ant-message-notice {
 }
 .layer-detail-opacity input[type="range"]::-moz-range-track {
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   background: linear-gradient(to right, var(--accent) 0 var(--fill, 100%), var(--panel-3) var(--fill, 100%) 100%);
 }
 .layer-detail-opacity input[type="range"]::-moz-range-thumb {
@@ -1599,7 +1628,7 @@ html .ant-message .ant-message-notice {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--text);
   font-size: var(--fs-12);
@@ -1764,7 +1793,7 @@ html .ant-message .ant-message-notice {
   content: "";
   width: 3px;
   height: 13px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   background: var(--accent);
 }
 .map-menu-label {
@@ -1816,7 +1845,7 @@ html .ant-message .ant-message-notice {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--muted);
   cursor: pointer;
@@ -2112,7 +2141,7 @@ html .ant-message .ant-message-notice {
 }
 .result-list-5::-webkit-scrollbar-thumb {
   background: var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius);
 }
 .result-list-5::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
@@ -2154,7 +2183,7 @@ html .ant-message .ant-message-notice {
   font-size: 12px;
   color: var(--muted);
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius);
   padding: 0 4px;
   white-space: nowrap;
 }
@@ -2283,7 +2312,7 @@ html .ant-message .ant-message-notice {
   justify-content: center;
   color: var(--faint);
   cursor: grab;
-  border-radius: 3px;
+  border-radius: var(--radius);
 }
 
 .drag-handle:hover {
@@ -2478,7 +2507,7 @@ html .ant-message .ant-message-notice {
   width: 100%;
   padding: 5px 8px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -2647,7 +2676,7 @@ html .ant-message .ant-message-notice {
 .settings-avatar {
   width: 44px;
   height: 44px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   object-fit: cover;
   flex: none;
 }
@@ -2669,7 +2698,7 @@ html .ant-message .ant-message-notice {
   justify-content: center;
   padding: 3px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: transparent;
   cursor: pointer;
 }
@@ -2682,7 +2711,7 @@ html .ant-message .ant-message-notice {
   background: var(--accent-soft);
 }
 .avatar-cell .ant-avatar {
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 .avatar-picker-foot {
   display: flex;
@@ -2763,10 +2792,11 @@ html .ant-message .ant-message-notice {
   bottom: 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px 6px 10px;
+  gap: 6px;
+  /* 图注是背景角标，留白比卡片更紧 */
+  padding: 4px 8px 4px 7px;
   /* 与登录卡片保持同一圆角；这里是背景图注，不做胶囊形 */
-  border-radius: 10px;
+  border-radius: var(--radius);
   /* 跟随主题：浅色主题用白底深字，深色主题用黑底浅字 */
   background: rgba(255, 255, 255, 0.88);
   color: var(--text);
@@ -2783,7 +2813,7 @@ html .ant-message .ant-message-notice {
 .scenic-bg-caption-bar {
   width: 3px;
   height: 12px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   background: var(--accent);
 }
 
@@ -2796,7 +2826,7 @@ html .ant-message .ant-message-notice {
   overflow: auto;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
   /* 上下减半、左右减三分之一（原 24px 26px 16px） */
   padding: 12px 17px 8px;
@@ -2853,14 +2883,14 @@ html .ant-message .ant-message-notice {
   gap: 4px;
   margin: 4px 0 10px;
   padding: 3px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel-2);
   border: 1px solid var(--line);
 }
 .login-tabs button {
   height: 30px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: transparent;
   color: var(--muted);
   font-size: var(--fs-14);
@@ -2900,7 +2930,7 @@ html .ant-message .ant-message-notice {
   position: relative;
   height: 40px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel-2);
   overflow: hidden;
 }
@@ -2929,7 +2959,7 @@ html .ant-message .ant-message-notice {
   width: 40px;
   height: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--muted);
   display: flex;
@@ -3000,6 +3030,15 @@ html .ant-message .ant-message-notice {
   margin-top: 2px;
 }
 
+/* 滑块未完成时按钮禁用：去掉 AntD 禁用态的边框与 outline，避免看起来仍可点击 */
+.login-card form > .ant-btn[disabled],
+.login-card form > .ant-btn[disabled]:hover,
+.login-card form > .ant-btn[disabled]:focus {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 .login-foot {
   margin-top: 8px;
   display: flex;
@@ -3048,7 +3087,7 @@ html .ant-message .ant-message-notice {
 .login-caption .bar {
   width: 3px;
   height: 12px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   background: var(--accent);
 }
 
@@ -3193,7 +3232,7 @@ html .ant-message .ant-message-notice {
 }
 .set-body::-webkit-scrollbar-thumb {
   background: var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 .set-body::-webkit-scrollbar-track {
   background: transparent;
@@ -3267,7 +3306,7 @@ html .ant-message .ant-message-notice {
   align-items: center;
   height: 18px;
   padding: 0 8px;
-  border-radius: 9px;
+  border-radius: var(--radius);
   background: var(--accent);
   color: #fff;
   font-size: var(--fs-12);
@@ -3281,7 +3320,7 @@ html .ant-message .ant-message-notice {
   align-items: center;
   height: 18px;
   padding: 0 8px;
-  border-radius: 9px;
+  border-radius: var(--radius);
   background: var(--accent-soft);
   color: var(--accent);
   font-size: var(--fs-12);
@@ -3295,7 +3334,7 @@ html .ant-message .ant-message-notice {
   align-items: center;
   height: 18px;
   padding: 0 8px;
-  border-radius: 9px;
+  border-radius: var(--radius);
   background: var(--panel-3);
   color: var(--muted);
   font-size: var(--fs-12);
@@ -3399,7 +3438,7 @@ html .ant-message .ant-message-notice {
 }
 .cp-hue::-webkit-slider-runnable-track {
   height: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
 }
 .cp-hue::-webkit-slider-thumb {
@@ -3415,7 +3454,7 @@ html .ant-message .ant-message-notice {
 }
 .cp-hue::-moz-range-track {
   height: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
 }
 .cp-hue::-moz-range-thumb {
@@ -3435,7 +3474,7 @@ html .ant-message .ant-message-notice {
   height: 18px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 .cp-pal button.on {

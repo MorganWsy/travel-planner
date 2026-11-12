@@ -810,41 +810,42 @@ export default function WorkspacePage() {
         {mobileSwitch}
         {/* 标题是可直接编辑的输入框；日期范围放到下一行，避免看起来像面包屑或统计信息 */}
         <div className="trip-heading">
-          <div className="trip-title-row">
-            <Input
-              ref={titleRef}
-              size="small"
-              variant="borderless"
-              value={titleDraft ?? trip.title}
-              onChange={(event) => setTitleDraft(event.target.value)}
-              onBlur={patchTitle}
-              onPressEnter={patchTitle}
-              onFocus={(event) => event.currentTarget.select()}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  setTitleDraft(trip.title);
-                  event.currentTarget.blur();
-                }
-              }}
-              className="title-input"
-              maxLength={120}
-              aria-label="行程名称"
-              title="点击修改行程名称，Enter 保存，Esc 取消"
-            />
-            <Tooltip title="重命名行程">
-              <button
-                type="button"
-                className="title-edit-btn"
-                aria-label="重命名行程"
-                onClick={() => {
-                  titleRef.current?.focus();
-                  titleRef.current?.select();
-                }}
-              >
-                <IconEdit width={13} height={13} />
-              </button>
-            </Tooltip>
-          </div>
+          <Input
+            ref={titleRef}
+            size="small"
+            variant="borderless"
+            value={titleDraft ?? trip.title}
+            onChange={(event) => setTitleDraft(event.target.value)}
+            onBlur={patchTitle}
+            onPressEnter={patchTitle}
+            onFocus={(event) => event.currentTarget.select()}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setTitleDraft(trip.title);
+                event.currentTarget.blur();
+              }
+            }}
+            className="title-input"
+            maxLength={120}
+            aria-label="行程名称"
+            title="点击修改行程名称，Enter 保存，Esc 取消"
+            suffix={
+              <Tooltip title="重命名行程">
+                <button
+                  type="button"
+                  className="title-edit-btn"
+                  aria-label="重命名行程"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    titleRef.current?.focus();
+                    titleRef.current?.select();
+                  }}
+                >
+                  <IconEdit width={13} height={13} />
+                </button>
+              </Tooltip>
+            }
+          />
           <span className="trip-date-range">{dayLabel}</span>
         </div>
       </TopBar>

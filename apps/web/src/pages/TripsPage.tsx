@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, DatePicker, Dropdown, Empty, Form, Input, Spin, Typography } from "antd";
 import DragModal from "../components/DragModal";
-import { EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
 import { api, type TripSummary } from "../api/api";
 import { errorText } from "../api/client";
 import { notify } from "../lib/notify";
 import TopBar from "../components/TopBar";
+import { IconMore } from "../components/icons";
 
 export default function TripsPage() {
   const navigate = useNavigate();
@@ -96,8 +97,12 @@ export default function TripsPage() {
                       menu={{
                         items: [
                           { key: "rename", label: "重命名", icon: <EditOutlined /> },
-                          { key: "clone", label: "复制行程" },
-                          { key: "delete", label: <span style={{ color: "#cf1322" }}>删除</span> },
+                          { key: "clone", label: "复制行程", icon: <CopyOutlined /> },
+                          {
+                            key: "delete",
+                            label: <span style={{ color: "#cf1322" }}>删除</span>,
+                            icon: <DeleteOutlined style={{ color: "#cf1322" }} />,
+                          },
                         ],
                         onClick: ({ key, domEvent }) => {
                           domEvent.stopPropagation();
@@ -110,9 +115,14 @@ export default function TripsPage() {
                         },
                       }}
                     >
-                      <Button size="small" type="text" onClick={(event) => event.stopPropagation()}>
-                        ···
-                      </Button>
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<IconMore width={16} height={16} />}
+                        aria-label="行程操作"
+                        title="行程操作"
+                        onClick={(event) => event.stopPropagation()}
+                      />
                     </Dropdown>
                   </div>
                   <div className="muted tiny">

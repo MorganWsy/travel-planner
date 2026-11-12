@@ -7,7 +7,11 @@ const shared: ThemeConfig = {
       '"Noto Sans SC", "Source Han Sans SC", "Source Han Sans CN", "LXGW WenKai", "Microsoft YaHei", "PingFang SC", sans-serif',
     // 正文字号 14、控件高 32：24 英寸 1080p 下 13px 偏小，12px 只留给辅助信息
     fontSize: 14,
-    borderRadius: 6,
+    // 与 styles.css 的 --radius 保持一致；AntD 的几档圆角全部收拢到同一个值
+    borderRadius: 8,
+    borderRadiusSM: 8,
+    borderRadiusLG: 8,
+    borderRadiusXS: 8,
     controlHeight: 32,
     wireframe: false,
   },
@@ -17,7 +21,7 @@ const shared: ThemeConfig = {
     // Antd 6 的 Table 字号由 cellFontSize 系列 token 控制，CSS 覆盖会被 :where 规则和变量重定义绕开
     Table: {
       cellPaddingBlockSM: 6,
-      headerBorderRadius: 4,
+      headerBorderRadius: 8,
       cellFontSize: 13,
       cellFontSizeMD: 13,
       cellFontSizeSM: 13,

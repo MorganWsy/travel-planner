@@ -9,6 +9,7 @@ import AvatarPickerModal from "./AvatarPickerModal";
 import DragModal from "./DragModal";
 import { avatarUrl } from "../lib/avatars";
 import {
+  IconAlert,
   IconChevronDown,
   IconChevronLeft,
   IconLogout,
@@ -87,7 +88,7 @@ export default function TopBar({ showBack = false, backTo, children, actions, co
         </Tooltip>
       ) : null}
       <span className="brand">
-        <Logo size={24} className="brand-logo" />
+        <Logo size={30} className="brand-logo" />
         <span className="brand-name">行迹</span>
         {compact ? null : <span className="brand-sub">旅游规划</span>}
       </span>
@@ -183,7 +184,10 @@ export default function TopBar({ showBack = false, backTo, children, actions, co
         ]}
         destroyOnHidden
       >
-        <div className="hint-line">需要重新验证身份才能继续使用。</div>
+        <div className="logout-confirm">
+          <IconAlert width={18} height={18} className="logout-confirm-icon" />
+          <span>退出后需要重新验证身份才能继续使用，您确定退出吗？</span>
+        </div>
       </DragModal>
     </header>
   );
