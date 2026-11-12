@@ -131,9 +131,10 @@ cd apps/web && pnpm codegen:api
 
 ## 文档
 
-1. [架构说明](docs/ARCHITECTURE.md)
-2. [完整实现方案](docs/IMPLEMENTATION_PLAN.md)
-3. [API 与类型契约](docs/API_CONTRACT.md)
-4. [验收与测试清单](docs/ACCEPTANCE.md)
-5. [地图供应商核实记录](docs/PROVIDER_RESEARCH.md)
-6. [AI 开发约定](AGENTS.md)
+1. [文档索引](docs/README.md) — 每份文档的用途、阅读顺序与维护约定
+2. [架构说明](docs/ARCHITECTURE.md) — 当前实现、交付差异、验证记录、版本与升级状态
+3. [完整实现方案](docs/IMPLEMENTATION_PLAN.md) — 产品范围、P0–P5 阶段计划与目标架构
+4. [API 与类型契约](docs/API_CONTRACT.md) — 接口、错误码、权限与公共类型
+5. [验收与测试清单](docs/ACCEPTANCE.md) — 分阶段验收标准与出口条件
+6. [地图供应商核实记录](docs/PROVIDER_RESEARCH.md) — 外部能力事实、来源与验证状态
+7. [AI 开发约定](AGENTS.md)
