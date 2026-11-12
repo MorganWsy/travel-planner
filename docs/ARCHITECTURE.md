@@ -425,7 +425,7 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 | TypeScript | 7.0.2 |
 | Vite | 8.3.8 |
 | `@vitejs/plugin-react` | 6.3.0 |
-| MapLibre GL JS | 5.24.0 |
+| MapLibre GL JS | 6.18.0 |
 | Ant Design | 6.7.0 |
 | `@ant-design/icons` | 6.3.4 |
 | Zustand | 5.1.0 |
@@ -468,15 +468,24 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 - 按 AntD 6 运行时 DOM 修正 `styles.css`：Modal、Tooltip、Notification、Message、Select；Table 字号改走主题 token。
 - 把 `notify.tsx` 的 notification 标题字段从 `message` 改为 `title`。
 
-### 9.2 升级验证（UI 批次）
+**第 3 步：MapLibre 6（2026-11-12）**
+
+- 升级 `maplibre-gl@6.18.0`。
+- 默认导入改为 `import * as maplibregl from "maplibre-gl"`；`LngLatBounds` 仍命名导入，`Map` 类型改为 `import type`。
+- `setPaintProperty(..., null)` 改为 `undefined`，兼容 v6 更严格的类型；运行时行为仍是复位为样式默认值。
+- 地图初始化捕获 `GPUInitializationError`，WebGL2 不可用时在画布位置显示明确降级提示，日程、时间线和攻略不受影响。
+- 真实无头 Edge 冒烟：工作台地图画布 812×713，`webgl2=true`，未出现降级层，控制台无 error/warning。
+
+### 9.2 升级验证（UI + 地图批次）
 
 | 检查 | 命令 / 方式 | 结果 |
 | --- | --- | --- |
 | peer 依赖 | `pnpm peers check` | 无问题 |
 | 类型检查 | `pnpm typecheck`（TS 7.0.2） | 0 错 |
 | 生产构建 | `pnpm build`（Vite 8.3.8 / Rolldown） | 通过，约 0.8s |
-| 产物体积 | `dist/assets` | react 257.76KB、antd 993.81KB、maplibre 1,027.67KB、WorkspacePage 94.60KB、index 88.11KB |
+| 产物体积 | `dist/assets` | react 257.76KB、antd 993.82KB、maplibre 1,076.79KB、WorkspacePage 95.70KB、index 89.38KB |
 | 桌面冒烟 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 → 攻略 → 导出 MD | 正常，控制台无 error/warning |
+| MapLibre 6 | 工作台地图初始化 | 画布 812×713、WebGL2 可用、无降级提示、无 console error |
 | 历史页 | 版本列表、快照详情、表格 | 正常，表格字号 13px |
 | 设置页 | 地图数据源、外观、登录会话表格、Popconfirm | 正常 |
 | 分享弹窗 | 有效期 Select、密码 Input、原生 checkbox | 正常，Modal 内边距 10px 12px |
@@ -488,9 +497,10 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 
 ### 9.3 尚未升级
 
+前端大版本升级已全部完成；剩余为后端依赖与工具版本。
+
 | 项 | 当前 | 目标/说明 |
 | --- | --- | --- |
-| MapLibre GL JS | 5.24.0 | 6.x：ESM-only、要求 WebGL2；默认导入需改命名空间导入，并补 WebGL2 降级提示 |
 | FastAPI / Starlette | 0.115.6 / 0.41.3 | 0.16x；回归路由、异常、CORS、静态托管、OpenAPI |
 | SQLAlchemy / GeoAlchemy2 | 2.0.36 / 0.16.0 | 2.1 / 0.21 一起升级，跑 PostGIS 集成测试 |
 | pytest | 8.3.4 | 9.x；回归 fixture 作用域与配置项 |
@@ -556,7 +566,7 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 | Python 依赖一致性 | `pip check` | No broken requirements found |
 | 前端 peer 依赖 | `pnpm peers check` | 无问题 |
 | 前端类型检查 | `pnpm typecheck` | 0 错 |
-| 前端构建 | `pnpm build` | 通过；react 257.76KB、antd 993.81KB、maplibre 1,027.67KB |
+| 前端构建 | `pnpm build` | 通过；react 257.76KB、antd 993.82KB、maplibre 1,076.79KB |
 | 开发服务器 | `pnpm dev --host 127.0.0.1` | Vite 8.3.8 启动，登录页正常 |
 | 生产构建托管 | FastAPI 托管 `dist`，访问 `:8007` | 登录页与静态资源正常，无 pageerror |
 | 登录后主流程 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 | 正常；地图画布 400×274；无 pageerror |
@@ -590,7 +600,7 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 4. **P3 扩展**：真实矩阵预算控制（每任务 400 段上限）、多日分配、冲突诊断文案。
 5. **P4 补全**：附件/图片、GeoPackage 与 Shapefile 预检、COG/DEM 与 TiTiler、PWA 离线攻略、分享页图层。
 6. **发布前**：SMTP 生产联调、HTTPS 与反向代理、备份恢复演练、日志脱敏审计。
-7. **技术栈**：MapLibre 6、后端依赖升级；详见 9.3。
+7. **技术栈**：MapLibre 6 已完成；继续升级后端依赖，详见 9.3。
 8. **容器化**：先 PostgreSQL/PostGIS 测试库，再 API/Web，Redis/RQ 最后加。
 
 ### 10.8 对原方案的修正意见
@@ -627,7 +637,7 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 5. **`styles.css` 深度覆盖 Ant Design DOM**：AntD 6 已完成一轮适配，但后续升级仍必须做视觉回归；优先逐步迁移到 `classNames` / `styles` API。
 6. **地图组件体量大**：`MapCanvas.tsx` 职责多，后续可拆为底图、标注、测量、图层、路线子模块。
 7. **供应商持久化策略保守**：路线几何默认不落库，刷新后重查；这是合规选择，不是 bug。
-8. **MapLibre 6 与后端依赖待升级**：UI 栈已到 React 19 / AntD 6 / Router 7；MapLibre 仍是 5.24.0，后端仍是 FastAPI 0.115 / SQLAlchemy 2.0。升级路径见 9.3。
+8. **后端依赖待升级**：前端已到 React 19 / AntD 6 / Router 7 / MapLibre 6；后端仍是 FastAPI 0.115 / SQLAlchemy 2.0。升级路径见 9.3。
 9. **缺少容器化**：本机依赖直装 PostgreSQL/Node/Python，换机成本高；用户已表示可安装 Docker，建议补 Compose。
 10. **AntD 6 批次未复测手机视口与真机**：390×844、iPad、Android Chrome、iPhone Safari 仍需在后续验收中执行；当前只完成桌面浏览器回归。
 11. **`openapi-typescript` 与 TS 7 不兼容**：只能通过 `pnpm codegen:api` 的隔离 TS 5.9.3 运行，上游修复前不要把它加回应用依赖。
