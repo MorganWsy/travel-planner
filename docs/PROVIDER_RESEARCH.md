@@ -109,6 +109,16 @@
 
 `duration` 缺失时返回 `status=partial` 并显式提示手工录入，不用距离除以固定速度推算耗时。
 
+### 7.1 高德 v5 周边搜索字段（2026-11-12）
+
+| 项 | 实测结果 |
+| --- | --- |
+| 端点 | `GET /v5/place/around`，南昌西湖区示例点 |
+| 区县 | 基础响应包含 `adname`（如“西湖区”）、`cityname`、`adcode`、`pname`，不需要额外参数 |
+| 扩展字段 | `show_fields=business` 增加 `business.tel`、`business.rating` 等；项目用它补电话，兼容旧版顶层 `tel` / `biz_ext.tel` |
+| 分页 | `page_size` 最大 25，`page_num` 翻页；项目采集在 `limit > 25` 时继续翻页 |
+| 历史数据 | 早期入库的点位没有保存 `adname`；重新采集同名点位会回填，演示景点图层的 51 个旧点已用批量逆地理编码补齐 |
+
 ## 8. MapLibre 演示底图的评估（2026-11-10）
 
 - 实测环境：本机直连（绕过本地代理），`https://demotiles.maplibre.org/style.json` 三次 TTFB 0.45–0.47 s、总 0.53–0.62 s、HTTP 200；`tiles/0/0/0.pbf` 三次总 0.62–0.63 s、HTTP 200。速度可用，不是访问不了。

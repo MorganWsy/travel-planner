@@ -112,7 +112,7 @@ export default function SettingsPage() {
     },
     {
       field: "tianditu_browser_key",
-      hint: `天地图「浏览器端」类型 Key，用于底图。它按域名校验，且只接受已备案域名，localhost 和 127.0.0.1 填不进去。本机开发请先用高德底图，部署到正式域名后再启用天地图。当前页面是 ${origin}。`,
+      hint: `天地图「浏览器端」类型 Key，用于底图。它按域名校验，且只接受已备案域名，localhost 和 127.0.0.1 填不进去。正式域名白名单配置完成前，请先使用高德底图。当前页面是 ${origin}。`,
     },
   ];
 

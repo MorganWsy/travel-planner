@@ -316,12 +316,19 @@ def test_reorder_keeps_manual_legs(client, auth) -> None:
     first, second = [stop["id"] for stop in trip["stops"]]
     leg = client.post(
         f"/api/v1/trips/{trip['id']}/routes/manual",
-        json={"from_stop_id": first, "to_stop_id": second, "duration_seconds": 600, "label": "步行"},
+        json={
+            "from_stop_id": first,
+            "to_stop_id": second,
+            "distance_m": 1200,
+            "duration_seconds": 600,
+            "label": "步行",
+        },
         headers={**auth, "If-Match": f'"{trip["revision"]}"'},
     )
     assert leg.status_code == 200, leg.text
     trip = leg.json()
     assert len(trip["route_legs"]) == 1
+    assert trip["route_legs"][0]["distance_m"] == 1200, "保存路线时距离要一起落库，右栏卡片才能显示"
 
     reordered = client.post(
         f"/api/v1/trips/{trip['id']}/reorder-stops",
@@ -330,6 +337,59 @@ def test_reorder_keeps_manual_legs(client, auth) -> None:
     )
     assert reordered.status_code == 200, reordered.text
     assert len(reordered.json()["route_legs"]) == 1, "手工交通不应因排序被删除"
+
+
+def test_collect_pois_refreshes_existing_district_and_phone(client, auth, monkeypatch) -> None:
+    """重新采集同名点位时，要补上旧记录缺失的区县和电话，而不是直接跳过。"""
+    trip = new_trip(client, auth, days=1)
+    created = client.post(
+        f"/api/v1/trips/{trip['id']}/layers",
+        json={"name": "景点", "kind": "system", "category": "attraction"},
+        headers=auth,
+    )
+    assert created.status_code == 201, created.text
+    layer = created.json()
+    # 模拟早期入库的数据：只有地址和来源，没有区县、电话
+    seeded = client.post(
+        f"/api/v1/trips/{trip['id']}/layers/{layer['id']}/features",
+        json={
+            "name": "测试景点",
+            "category": "风景名胜",
+            "lon": 115.8587,
+            "lat": 28.6432,
+            "properties": {"address": "旧地址", "provider": "amap"},
+        },
+        headers=auth,
+    )
+    assert seeded.status_code == 200, seeded.text
+    assert "adname" not in seeded.json()["features"][0]["properties"]
+
+    def fake_around(_provider, **_kwargs):
+        return (
+            [
+                {
+                    "name": "测试景点",
+                    "category": "风景名胜",
+                    "address": "新地址",
+                    "geometry": {"type": "Point", "coordinates": [115.8587, 28.6432]},
+                    "provider": "amap",
+                    "extra": {"adname": "西湖区", "tel": "0791-12345678", "distance": "120"},
+                }
+            ],
+            "amap",
+        )
+
+    monkeypatch.setattr("app.routers.layers.registry.around", fake_around)
+    refreshed = client.post(
+        f"/api/v1/trips/{trip['id']}/layers/{layer['id']}/collect",
+        json={"lon": 115.8587, "lat": 28.6432, "radius_m": 1000, "keywords": "景点", "limit": 10},
+        headers=auth,
+    )
+    assert refreshed.status_code == 200, refreshed.text
+    feature = refreshed.json()["features"][0]
+    assert feature["properties"]["adname"] == "西湖区"
+    assert feature["properties"]["tel"] == "0791-12345678"
+    assert feature["properties"]["address"] == "新地址"
 
 
 def test_tianditu_browser_key_enables_basemap_immediately(client, user_factory) -> None:

@@ -10,6 +10,7 @@ import { notify } from "../lib/notify";
 import { IconGrip } from "./icons";
 import Field from "./Field";
 import { IconWeather } from "./icons";
+import { formatDistance } from "../lib/coords";
 
 const KIND_LABEL: Record<string, string> = {
   attraction: "景点",
@@ -88,6 +89,21 @@ export default function DayPanel({
   );
   const dayTimeline: DayTimeline | undefined = timeline?.days.find((item) => item.day_id === day?.id);
   const blockOf = (stopId: string) => dayTimeline?.blocks.find((block) => block.stop_id === stopId);
+  // 上一站到本站已保存的路段：优先按事项 id 匹配，其次按地点 id。
+  // 距离来自「查询路线 → 保存」时一并写入的 route_leg.distance_m。
+  const legBefore = (index: number) => {
+    if (index <= 0) return undefined;
+    const previous = dayStops[index - 1];
+    const current = dayStops[index];
+    return trip.route_legs.find(
+      (leg) =>
+        (leg.from_stop_id === previous.id && leg.to_stop_id === current.id) ||
+        (!!previous.place_id &&
+          !!current.place_id &&
+          leg.from_place_id === previous.place_id &&
+          leg.to_place_id === current.place_id),
+    );
+  };
 
   const openEdit = (stop: StopOut) => {
     setEditing(stop);
@@ -255,6 +271,7 @@ export default function DayPanel({
         <div className="stop-list">
           {dayStops.map((stop, index) => {
             const block = blockOf(stop.id);
+            const previousLeg = legBefore(index);
             const hasTime = Boolean(block?.start && block?.end);
             const start = block?.start ? dayjs(block.start).format("HH:mm") : "";
             const end = block?.end ? dayjs(block.end).format("HH:mm") : "";
@@ -388,6 +405,7 @@ export default function DayPanel({
                     {index > 0 && block?.travel_seconds !== null && block?.travel_seconds !== undefined ? (
                       <span>{Math.round(block.travel_seconds / 60)} 分车程</span>
                     ) : null}
+                    {previousLeg?.distance_m ? <span>路程 {formatDistance(previousLeg.distance_m)}</span> : null}
                     {place ? <span className="place-name" title={place.name}>{place.name}</span> : null}
                   </div>
                 </div>

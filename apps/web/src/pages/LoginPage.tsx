@@ -77,10 +77,11 @@ export default function LoginPage() {
       }
       setSending(true);
       try {
-        const result = await api.sendEmailCode({ email, scene: "login", challenge_id: challengeId, slider_percent: percent });
+        await api.sendEmailCode({ email, scene: "login", challenge_id: challengeId, slider_percent: percent });
         startCountdown(60);
         setSentHint(true);
-        notify.success(result.dev ? "开发模式未配 SMTP，验证码在服务端日志里" : "验证码已发送至邮箱");
+        // 面向用户只给结果，不暴露 SMTP/日志等内部实现
+        notify.success("验证码已发送，请查收邮箱");
         return true;
       } catch (error) {
         notify.error(errorText(error));

@@ -2,7 +2,7 @@
 
 本仓库是 `docs/IMPLEMENTATION_PLAN.md` 的**可运行实现**（P0–P1 纵向闭环 + P2/P3/P4 的部分能力），不是页面骨架。当前状态与方案文档的差异、未实现项、外部依赖，见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 第 8–10 节。
 
-想快速理解代码结构，先看 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。当前实际版本为 React 19.3.1 / Vite 8.3.8 / TypeScript 7.0.2 / MapLibre 6.18 / Ant Design 6.7，后端为 FastAPI 0.162 / SQLAlchemy 2.1；2026-11-12 已完成工具链、UI、MapLibre 6 和后端依赖升级，完整测试 32 passed。版本快照、升级记录和验证结果见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 第 9 节。
+想快速理解代码结构，先看 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。当前实际版本为 React 19.3.1 / Vite 8.3.8 / TypeScript 7.0.2 / MapLibre 6.18 / Ant Design 6.7，后端为 FastAPI 0.162 / SQLAlchemy 2.1；2026-11-12 已完成工具链、UI、MapLibre 6 和后端依赖升级，完整测试 33 passed。版本快照、升级记录和验证结果见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 第 9 节。
 
 ## 现在能做什么
 

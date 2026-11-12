@@ -231,10 +231,10 @@ HTTP 请求
 `components/MapCanvas.tsx` 是最大的前端组件，职责包括：
 
 - 创建 MapLibre 地图，切换高德矢量/影像、天地图、空白底板。
-- 把地点渲染为 GeoJSON circle + symbol 图层（不是 DOM Marker），保证平移/缩放一致。
+- 把地点渲染为 MapLibre symbol 图层，图标直接使用实心图案，不再套针形/圆底；序号和名称用跟随坐标的 DOM Marker 标签展示。
 - 右键新增/编辑地点、地图选点、测距、指北针、比例尺、状态栏经纬度。
-- 专题图层显隐、透明度、点选信息浮层。
-- 显示本次会话的路线几何（`displayRoutes`）。
+- 专题图层显隐、透明度、点选信息浮层；POI 名称在缩放层级 ≥14 或选中时显示，低层级只保留行程点标签。
+- 显示本次会话的路线几何（`displayRoutes`），并在路线中段显示查询到的距离；保存后距离同步到右栏事项卡片。
 - 与工作台共享编号顺序，点击标注联动右侧日程。
 
 坐标约定：数据库/接口 WGS84；高德 GCJ-02 底图在绘制前逐点投影；路线几何也必须投影后绘制，否则整体偏移。
@@ -305,8 +305,8 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 
 - 用户在日程里选两点和方式（步行/自行车/电动车/驾车/公交地铁）。
 - 后端调用高德/天地图适配器，返回临时候选。
-- 前端把候选几何放入 `displayRoutes` 供本次会话查看。
-- 保存时只保存允许持久化的字段；当前策略下供应商几何为 `unknown`，因此刷新后需要重新查询。
+- 前端把候选几何放入 `displayRoutes` 供本次会话查看，并在路线中段显示 `distance_m`。
+- 保存时把 `distance_m` 和耗时写入手工 `route_leg`，右栏卡片据此显示“X 分车程 / 路程 X 公里”；供应商几何当前策略为 `unknown`，因此刷新后需要重新查询。
 - 也可手工录入交通耗时，手工数据优先参与时间线。
 
 ### 6.5 优化
@@ -341,7 +341,7 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 
 - `MapLayer` 分 `mine`（用户自建）和 `system`（地铁站/公交站/酒店/景点/商场/饭店/公厕）。
 - `MapLayerFeature` 坐标固定 WGS84。
-- 支持打点、删除、显隐、透明度、按名称去重采集周边 POI、导出 GeoJSON。
+- 支持打点、删除、显隐、透明度、按名称去重采集周边 POI、重新采集时回填旧点缺失字段、导出 GeoJSON。
 - 系统图层不允许删除；图层属于行程，随 `TripDetail` 返回。
 - 尚未进入 revision 快照，因此分享/历史/导出不包含图层。
 
@@ -484,7 +484,7 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 
 - 升级 FastAPI 0.162.5 / Starlette 1.10.0、SQLAlchemy 2.1.8 / GeoAlchemy2 0.21.0、Pydantic 2.14.3 / pydantic-settings 2.16.2、psycopg[binary] 3.3.9、uvicorn 0.54.0。
 - 同步升级 pytest 9.2.0、cryptography 50.0.2、python-docx 1.2.0、shapely 2.2.0、alembic 1.20.1、python-multipart 0.0.33。
-- 本机 PostgreSQL 17.2 / PostGIS 3.5 建 `travel_planner_test`；完整测试 32 passed（此前无测试库时为 16 passed / 16 skipped）。
+- 本机 PostgreSQL 17.2 / PostGIS 3.5 建 `travel_planner_test`；完整测试 33 passed（此前无测试库时为 16 passed / 16 skipped）。
 - `pip check` 无冲突；`app.main` 导入成功；uvicorn 0.54 在 8008 启动后 health/config 均返回 200。
 - 重新生成 OpenAPI 与 `schema.d.ts`；差异仅为上传字段 `format: binary` 消失、`ValidationError` 增加 `input` / `ctx`，业务类型未变。
 - FastAPI 0.162 新增 `opentelemetry-api` 与 `annotated-doc` 依赖，已一并写入锁文件。
@@ -496,14 +496,18 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 | peer 依赖 | `pnpm peers check` | 无问题 |
 | 类型检查 | `pnpm typecheck`（TS 7.0.2） | 0 错 |
 | 生产构建 | `pnpm build`（Vite 8.3.8 / Rolldown） | 通过，约 0.8s |
-| 产物体积 | `dist/assets` | react 257.76KB、antd 993.82KB、maplibre 1,076.88KB、maplibre worker 519.18KB、WorkspacePage 95.86KB、index 89.72KB |
+| 产物体积 | `dist/assets` | react 257.76KB、antd 993.82KB、maplibre 1,076.88KB、maplibre worker 519.18KB、WorkspacePage 102.30KB、index 89.59KB |
 | 后端依赖一致性 | `pip check` | No broken requirements found |
-| 后端完整测试 | `TEST_DATABASE_URL` → `pytest tests -q` | 32 passed |
+| 后端完整测试 | `TEST_DATABASE_URL` → `pytest tests -q` | 33 passed |
 | 后端启动 | uvicorn 0.54，临时 `:8008` 的 health/config | 均返回 200 |
 | Alembic 基线 | `upgrade head` → `check` → `downgrade base` → `upgrade head` | 通过，`No new upgrade operations detected` |
 | OpenAPI 类型生成 | `scripts/gen_openapi.py` + `pnpm codegen:api` | 成功，业务类型无变化 |
 | 桌面冒烟 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 → 攻略 → 导出 MD | 正常，控制台无 error/warning |
 | MapLibre 6 | 工作台地图初始化 | 画布 812×713、WebGL2 可用、`places` 源 32 个要素、标注与连线可见、无降级提示、无 console error |
+| 地图标注 | 实心图标 + 名称标签 | 默认视图可见 13 个行程点标签（17 个地点中重叠的低优先级标签在放大后出现）；图标不再套针形/圆底；POI 名称在层级 ≥14 或选中时显示 |
+| POI 区县 | 高德周边 + 批量逆地理编码回填 | 演示景点图层 51 个旧点位全部补上 `adname`，浮层显示“区县 西湖区” |
+| 路线距离 | 查询 → 地图中段标签 → 保存 → 右栏卡片 | 步行 1.47 公里：地图标签“1.47 公里”，保存后卡片显示“20 分车程 / 路程 1.47 公里” |
+| 关闭按钮 | `.app-close` + AntD Modal/Notification | 24×24 点击区、15px 图标、2.2 描边、`--text` 72% 透明度；浮层标题/正文均 14px |
 | 历史页 | 版本列表、快照详情、表格 | 正常，表格字号 13px |
 | 设置页 | 地图数据源、外观、登录会话表格、Popconfirm | 正常 |
 | 分享弹窗 | 有效期 Select、密码 Input、原生 checkbox | 正常，Modal 内边距 10px 12px |
@@ -520,8 +524,8 @@ Table 字号不再靠 `.ant-table { font-size }` 覆盖，而是使用组件 tok
 | 项 | 当前 | 说明 |
 | --- | --- | --- |
 | Node / pnpm | 22.18.0 / 11.1.0 | Node 24 LTS、pnpm 12 可选；升级 pnpm 会改锁文件格式 |
-| Docker | 未安装 | 建议先补 PostgreSQL/PostGIS Compose，再补 API/Web |
-| WSL | 安装包已下载，未安装 | `C:\Users\wsy\Downloads\wsl.3.0.3.0.x64.msi`；Docker Desktop 需要它 |
+| Docker | 未安装 | 当前决定暂不安装，继续使用本机 PostgreSQL/PostGIS；需要 CI 或换机复现时再补 PostgreSQL/PostGIS Compose |
+| WSL | 安装包已下载，未安装 | `C:\Users\wsy\Downloads\wsl.3.0.3.0.x64.msi`；Docker Desktop 需要它，当前不安装 |
 | Alembic | 1.20.1，已建 `0001_initial` 并验证 upgrade/downgrade/check | 后续 schema 变更新增 revision；CI 运行 `alembic check` |
 
 Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当前测试仍通过，暂不引入额外依赖。
@@ -578,7 +582,7 @@ Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
 | 后端纯逻辑测试 | `pytest tests/test_coords.py tests/test_schedule.py tests/test_guide.py -q` | 16 passed |
-| 后端全量测试 | `TEST_DATABASE_URL` 指向 `travel_planner_test` 后 `pytest tests -q` | 32 passed |
+| 后端全量测试 | `TEST_DATABASE_URL` 指向 `travel_planner_test` 后 `pytest tests -q` | 33 passed |
 | Python 依赖一致性 | `pip check` | No broken requirements found |
 | 前端 peer 依赖 | `pnpm peers check` | 无问题 |
 | 前端类型检查 | `pnpm typecheck` | 0 错 |
@@ -587,6 +591,15 @@ Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当
 | 生产构建托管 | FastAPI 托管 `dist`，访问 `:8007` | 登录页与静态资源正常，无 pageerror |
 | 登录后主流程 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 | 正常；地图画布 812×713；无 pageerror |
 | OpenAPI 类型生成 | `pnpm codegen:api`（隔离 TS 5.9.3） | 成功生成 `src/api/schema.d.ts` |
+
+**2026-11-12 地图标注与 POI 修正验证**
+
+- 无头 Edge 实测：默认视图可见 13 个行程点名称标签（17 个地点中重叠的低优先级标签暂隐，放大后出现）；POI 名称在缩放层级 15.2 展开，低层级只显示选中点；点击 POI 后浮层显示“区县 西湖区”，标题/正文均 14px、标题 700。
+- 关闭按钮实测 24×24、图标 15px、描边 2.2px、文字色 `--text` 72% 透明度；AntD Modal/Notification 同步使用这套视觉。
+- 路线查询实测：步行 1.47 公里，地图中段显示“1.47 公里”；保存后右栏卡片显示“20 分车程 / 路程 1.47 公里”，`route_legs.distance_m` 一并落库。
+- 重新采集同名 POI 会补旧记录缺失的区县/电话；演示景点图层 51 个历史点已通过高德批量逆地理编码回填 `adname`。
+- 高德周边采集改为 `show_fields=business` 并支持分页（单页 25 条），电话读取 `business.tel`，区县读取 `adname`。
+- 用户可见文案移除“仅本次会话显示、不入库”等内部说明；地图提示条按信息/警告显示图标，查询按钮改为主色“查询路线”。
 
 **2026-11-04 历史验证（AntD 5 基线，UI 升级后需复测的部分已注明）**
 
@@ -617,7 +630,7 @@ Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当
 5. **P4 补全**：附件/图片、GeoPackage 与 Shapefile 预检、COG/DEM 与 TiTiler、PWA 离线攻略、分享页图层。
 6. **发布前**：SMTP 生产联调、HTTPS 与反向代理、备份恢复演练、日志脱敏审计。
 7. **技术栈**：前端与后端主要依赖升级已完成；剩余 Docker/WSL 与发布前联调。
-8. **容器化**：Docker 未安装，WSL 安装包已下载未安装；先补 PostgreSQL/PostGIS Compose，再 API/Web，Redis/RQ 最后加。
+8. **容器化**：当前决定暂不安装 Docker/WSL，继续用本机 PostgreSQL/PostGIS；需要 CI 或换机复现时，先补 PostgreSQL/PostGIS Compose，再 API/Web，Redis/RQ 最后加。
 
 ### 10.8 对原方案的修正意见
 
@@ -653,7 +666,7 @@ Starlette 1.10 的 `TestClient` 提示 `httpx` 后端将迁移到 `httpx2`；当
 5. **`styles.css` 深度覆盖 Ant Design DOM**：AntD 6 已完成一轮适配，但后续升级仍必须做视觉回归；优先逐步迁移到 `classNames` / `styles` API。
 6. **地图组件体量大**：`MapCanvas.tsx` 职责多，后续可拆为底图、标注、测量、图层、路线子模块。
 7. **供应商持久化策略保守**：路线几何默认不落库，刷新后重查；这是合规选择，不是 bug。
-8. **基础设施未容器化**：前后端依赖已升级，但本机仍直装 PostgreSQL/Node/Python；Docker 未安装，WSL 安装包已下载未安装。换机复现依赖本机服务，建议补 Compose。
+8. **基础设施未容器化**：前后端依赖已升级，但本机仍直装 PostgreSQL/Node/Python；当前暂不安装 Docker/WSL。换机复现依赖本机服务，需要时再补 Compose。
 9. **AntD 6 批次未复测手机视口与真机**：390×844、iPad、Android Chrome、iPhone Safari 仍需在后续验收中执行；当前只完成桌面浏览器回归。
 10. **`openapi-typescript` 与 TS 7 不兼容**：只能通过 `pnpm codegen:api` 的隔离 TS 5.9.3 运行，上游修复前不要把它加回应用依赖。
 11. **Starlette TestClient 弃用警告**：Starlette 1.10 提示 `httpx` 后端将迁移到 `httpx2`；当前 32 项测试通过，暂不引入额外依赖。

@@ -223,18 +223,16 @@ def collect_pois(
         keywords=keywords,
         limit=payload.limit,
     )
+    # 同名点位用于去重；保留对象引用，采集结果里的新字段可以回填旧记录。
+    # 之前的实现只记名字并直接跳过，导致早期入库时缺失的区县/电话永远补不上。
     existing = {
-        f.name
+        f.name: f
         for f in db.scalars(select(MapLayerFeature).where(MapLayerFeature.layer_id == layer.id))
     }
     added = 0
+    updated = 0
     for row in rows:
         name = str(row.get("name") or "未命名地点")
-        if name in existing:
-            continue
-        geometry = geostore.point_wkb(row.get("geometry"))
-        if geometry is None:
-            continue
         # 只存供应商真实返回的字段（地址/区县/电话/距离/来源），不补任何猜测值
         extra = row.get("extra") or {}
         properties = {
@@ -244,19 +242,41 @@ def collect_pois(
             "distance": extra.get("distance"),
             "provider": provider,
         }
-        db.add(
-            MapLayerFeature(
-                layer_id=layer.id,
-                name=name,
-                category=row.get("category"),
-                geometry=geometry,
-                properties={k: v for k, v in properties.items() if v not in (None, "")},
-            )
+        properties = {k: v for k, v in properties.items() if v not in (None, "")}
+        feature = existing.get(name)
+        if feature is not None:
+            # 已有记录：只补新返回的非空字段，不删用户已经看到的旧值。
+            # 这样重新采集一次就能把历史点位缺失的区县、电话补齐。
+            merged = dict(feature.properties or {})
+            changed = False
+            for key, value in properties.items():
+                if merged.get(key) != value:
+                    merged[key] = value
+                    changed = True
+            category = row.get("category")
+            if category and feature.category != category:
+                feature.category = category
+                changed = True
+            if changed:
+                # JSON 列要整体赋新 dict，原地修改不会被 SQLAlchemy 识别。
+                feature.properties = merged
+                updated += 1
+            continue
+        geometry = geostore.point_wkb(row.get("geometry"))
+        if geometry is None:
+            continue
+        feature = MapLayerFeature(
+            layer_id=layer.id,
+            name=name,
+            category=row.get("category"),
+            geometry=geometry,
+            properties=properties,
         )
-        existing.add(name)
+        db.add(feature)
+        existing[name] = feature
         added += 1
     db.commit()
-    if added == 0:
+    if added == 0 and updated == 0:
         raise AppError("EMPTY_RESULT", "这一带没抓到新的点位，可换关键词、半径或地图位置再试。")
     return layer_payload(db, layer)
 

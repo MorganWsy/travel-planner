@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import AppSelect from "./AppSelect";
-import { GLYPH_BY_ID, GLYPH_LIBRARY, defaultGlyphOf, defaultIcon, drawGlyphDot, drawPinIcon, iconId, resolveGlyph, resolveShape } from "./mapIcons";
+import { GLYPH_BY_ID, GLYPH_LIBRARY, defaultGlyphOf, defaultIcon, drawFilledGlyph, iconId, resolveGlyph, resolveShape } from "./mapIcons";
+import CloseButton from "./CloseButton";
 // MapLibre 6 起只发布 ESM，且不再提供默认导出；统一用命名空间导入
 import * as maplibregl from "maplibre-gl";
 import { LngLatBounds, type Map as MapLibreMap } from "maplibre-gl";
@@ -19,9 +20,10 @@ import { notify } from "../lib/notify";
 import { errorText } from "../api/client";
 import { formatArea, formatDistance, gcj02ToWgs84, haversineMeters, wgs84ToGcj02 } from "../lib/coords";
 import {
+  IconAlert,
   IconAttraction,
-  IconClose,
   IconFit,
+  IconInfo,
   IconLodging,
   IconMeal,
   IconMinus,
@@ -46,8 +48,8 @@ interface Props {
   basemapId: string;
   selectedStopId: string | null;
   selectedPlaceId: string | null;
-  /** 地点 → 访问序号与首个引用它的事项，编号和右栏卡片同源 */
-  placeStops: Map<string, { number: number; stopId: string }>;
+  /** 地点 → 访问序号、首个引用它的事项与标题，编号和右栏卡片同源 */
+  placeStops: Map<string, { number: number; stopId: string; title?: string }>;
   /** 右栏点卡片时递增；地图据此把相机移到该地点 */
   focusStop: { stopId: string; token: number } | null;
   /** 本次会话查询到的真实路网几何：只显示，不入库、不进快照与导出 */
@@ -119,6 +121,36 @@ function dashArrayOf(dash: LineDash): number[] | null {
   if (dash === "dashed") return [4, 3];
   if (dash === "dotted") return [1, 3];
   return null;
+}
+
+/** 取折线按长度计的中点，用于把「距起点多少公里」放在路线中段。 */
+function midpointOfLine(coords: number[][]): [number, number] | null {
+  if (!coords.length) return null;
+  if (coords.length === 1) return [coords[0][0], coords[0][1]];
+  const lengths: number[] = [];
+  let total = 0;
+  for (let i = 1; i < coords.length; i += 1) {
+    const length = haversineMeters(
+      [coords[i - 1][0], coords[i - 1][1]],
+      [coords[i][0], coords[i][1]],
+    );
+    lengths.push(length);
+    total += length;
+  }
+  if (total <= 0) return [coords[0][0], coords[0][1]];
+  let remaining = total / 2;
+  for (let i = 0; i < lengths.length; i += 1) {
+    if (remaining <= lengths[i]) {
+      const ratio = lengths[i] === 0 ? 0 : remaining / lengths[i];
+      return [
+        coords[i][0] + (coords[i + 1][0] - coords[i][0]) * ratio,
+        coords[i][1] + (coords[i + 1][1] - coords[i][1]) * ratio,
+      ];
+    }
+    remaining -= lengths[i];
+  }
+  const last = coords[coords.length - 1];
+  return [last[0], last[1]];
 }
 
 function graticule(): GeoJSON.FeatureCollection {
@@ -319,6 +351,11 @@ export default function MapCanvas({
   const viewportRef = useRef<((center: { lon: number; lat: number }) => void) | undefined>(undefined);
   const onPickPointRef = useRef<((lon: number, lat: number) => void) | undefined>(undefined);
   const measureLabelMarkers = useRef<maplibregl.Marker[]>([]);
+  // 名称标签和路线距离标签都是 DOM Marker：图标本身仍是 MapLibre symbol，
+  // 标签跟随地图平移/缩放自动移动，不需要每次 move 手算位置。
+  const placeLabelMarkers = useRef<maplibregl.Marker[]>([]);
+  const layerLabelMarkers = useRef<maplibregl.Marker[]>([]);
+  const routeLabelMarkers = useRef<maplibregl.Marker[]>([]);
   const popupRef = useRef<maplibregl.Popup | null>(null);
   // 浮层内容挂在这个容器里，由 Popup 接管定位
   const [menuEl] = useState<HTMLDivElement | null>(() =>
@@ -390,6 +427,8 @@ export default function MapCanvas({
       return;
     }
     mapRef.current = map;
+    // 缩放结束后重绘标签：POI 名称只在较大比例尺下展开，低层级先把地图留给行程点。
+    map.on("zoomend", () => drawRef.current());
     // 构造参数里的 dragPan:false 不可靠，这里显式关掉左键平移
     map.dragPan.disable();
     map.getCanvas().style.cursor = "default";
@@ -478,10 +517,11 @@ export default function MapCanvas({
       title.textContent = `${layerName || categoryLabelOf(String(p.category ?? "")) || "点位"}：${String(p.name ?? "未命名")}`;
       const closeBtn = document.createElement("button");
       closeBtn.type = "button";
-      closeBtn.className = "map-menu-close";
+      closeBtn.className = "app-close";
       closeBtn.setAttribute("aria-label", "关闭");
+      // 与 CloseButton 组件保持一致：15px 图标、2.2 描边、24px 点击区域由 CSS 控制
       closeBtn.innerHTML =
-        '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+        '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
       closeBtn.addEventListener("click", (event) => {
         event.stopPropagation();
         closeLayerInfo();
@@ -726,6 +766,12 @@ export default function MapCanvas({
       rippleMarker.current = null;
       previewMarker.current?.remove();
       previewMarker.current = null;
+      for (const marker of placeLabelMarkers.current) marker.remove();
+      for (const marker of layerLabelMarkers.current) marker.remove();
+      for (const marker of routeLabelMarkers.current) marker.remove();
+      placeLabelMarkers.current = [];
+      layerLabelMarkers.current = [];
+      routeLabelMarkers.current = [];
       map.remove();
       mapRef.current = null;
     };
@@ -908,19 +954,14 @@ export default function MapCanvas({
     const draw = () => {
       const accent = dark ? "#4c9aff" : "#1668dc";
 
-      // 图标按需现画：每个点用「类别颜色 + 形状轮廓 + 图标图案 + 序号」拼出一张图。
-      // 图案来自图标库，同一类别下可换，所以 key 里带 glyph id，不按类别固定。
-      const ensureImage = (place: TripDetail["places"][number], category: string, number: number | null) => {
-        const shape = resolveShape(place.icon);
+      // 图标按需现画：直接把图标本体的实心路径画成一张图，不再套针形/圆底。
+      // 同一类别下图案可换，所以 key 里带 glyph id；序号改由名称标签展示，不压进图标。
+      const ensureImage = (place: TripDetail["places"][number], category: string) => {
         const glyph = resolveGlyph(place.icon, category);
-        const key = `pin-${category}-${shape.id}-${glyph.id}${number === null ? "" : `-n${number}`}`;
+        const key = `glyph-${category}-${glyph.id}`;
         if (!map.hasImage(key)) {
           const color = CATEGORY_COLOR[category] ?? CATEGORY_COLOR.other;
-          const image = drawPinIcon(shape, color, {
-            category,
-            glyph: glyph.paths,
-            label: number === null ? undefined : String(number),
-          });
+          const image = drawFilledGlyph(color, glyph.fill, { fillRule: glyph.fillRule });
           if (image) map.addImage(key, image, { pixelRatio: 2 });
         }
         return key;
@@ -941,9 +982,11 @@ export default function MapCanvas({
             mapLat: mapped[1],
             stopId: meta?.stopId ?? null,
             index: meta ? meta.number : null,
-            label: meta ? String(meta.number) : "",
+            // 地图标签优先显示事项标题；没有事项时退回地点名称。
+            label: meta?.title || place.name,
+            number: meta ? String(meta.number) : "",
             category,
-            iconKey: ensureImage(place, category, meta ? meta.number : null),
+            iconKey: ensureImage(place, category),
             color: CATEGORY_COLOR[place.category] ?? CATEGORY_COLOR.other,
             selected: selectedPlaceId === place.id,
           },
@@ -965,7 +1008,7 @@ export default function MapCanvas({
             .filter((leg) => leg.geometry)
             .map((leg) => ({
               type: "Feature" as const,
-              properties: { id: leg.id },
+              properties: { id: leg.id, distance_m: leg.distance_m ?? null },
               geometry: projectLine(leg.geometry as unknown as { coordinates: number[][] }),
             })),
           ...(displayRoutes?.features ?? []).map((feature) => ({
@@ -1033,7 +1076,80 @@ export default function MapCanvas({
         paint: { "line-color": accent, "line-width": 2.4, "line-opacity": 0.85 },
       });
 
+      // 路线距离：查询成功后把「两点之间多少公里」放在路线中段。
+      // 数据来自 displayRoutes / 已保存 route_legs 的 distance_m，不重新计算供应商距离。
+      for (const marker of routeLabelMarkers.current) marker.remove();
+      routeLabelMarkers.current = [];
+      for (const feature of realRoutes.features) {
+        const distance = Number(feature.properties?.distance_m);
+        if (!Number.isFinite(distance) || distance <= 0) continue;
+        if (feature.geometry?.type !== "LineString") continue;
+        const mid = midpointOfLine(feature.geometry.coordinates as number[][]);
+        if (!mid) continue;
+        const el = document.createElement("div");
+        el.className = "route-distance-label";
+        el.textContent = formatDistance(distance);
+        routeLabelMarkers.current.push(
+          new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(mid).addTo(map),
+        );
+      }
+
+      // 地点/行程点名称：始终显示，序号和标题来自右栏同一份 buildOrder。
+      // 名称是 DOM Marker，地图平移/缩放时由 MapLibre 自动跟随坐标。
+      for (const marker of placeLabelMarkers.current) marker.remove();
+      placeLabelMarkers.current = [];
+      const labelBoxes: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+      // 地图很密时先保证选中的点、再按行程顺序排优先级；
+      // 与已有标签重叠的低优先级标签先隐藏，放大后自然会重新出现。
+      const placeLabels = [...placeFeatures].sort((a, b) => {
+        const selectedA = a.properties?.selected ? 1 : 0;
+        const selectedB = b.properties?.selected ? 1 : 0;
+        if (selectedA !== selectedB) return selectedB - selectedA;
+        const numberA = Number(a.properties?.number) || Number.MAX_SAFE_INTEGER;
+        const numberB = Number(b.properties?.number) || Number.MAX_SAFE_INTEGER;
+        return numberA - numberB;
+      });
+      for (const feature of placeLabels) {
+        const label = String(feature.properties?.label ?? "").trim();
+        if (!label) continue;
+        const selected = Boolean(feature.properties?.selected);
+        const coords = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
+        const el = document.createElement("div");
+        el.className = `map-place-label${selected ? " selected" : ""}`;
+        const number = String(feature.properties?.number ?? "");
+        if (number) {
+          const badge = document.createElement("b");
+          badge.textContent = number;
+          // 序号底色跟右栏卡片一致，地图和日程看起来是同一套编号
+          const color = String(feature.properties?.color ?? "");
+          if (color) badge.style.background = color;
+          el.appendChild(badge);
+        }
+        const text = document.createElement("span");
+        text.textContent = label;
+        el.appendChild(text);
+        const point = map.project(coords);
+        const width = Math.min(180, label.length * 13 + (number ? 22 : 0) + 14);
+        const box = {
+          x1: point.x - width / 2,
+          y1: point.y + 16,
+          x2: point.x + width / 2,
+          y2: point.y + 38,
+        };
+        const overlap = labelBoxes.some(
+          (other) => box.x1 < other.x2 && box.x2 > other.x1 && box.y1 < other.y2 && box.y2 > other.y1,
+        );
+        if (overlap && !selected) continue;
+        labelBoxes.push(box);
+        placeLabelMarkers.current.push(
+          new maplibregl.Marker({ element: el, anchor: "top", offset: [0, 16] }).setLngLat(coords).addTo(map),
+        );
+      }
+
       // 专题图层：每层一个 GeoJSON 源 + 一个符号层，显隐只切数据，不重建图层
+      for (const marker of layerLabelMarkers.current) marker.remove();
+      layerLabelMarkers.current = [];
+      const showAllPoiNames = map.getZoom() >= 14;
       for (const layer of layers ?? []) {
         const features: GeoJSON.Feature[] = [];
         if (layer.visible) {
@@ -1065,10 +1181,13 @@ export default function MapCanvas({
             });
           }
         }
-        const imageKey = `layerdot-${layer.id}`;
+        const glyph = (layer.icon && GLYPH_BY_ID.get(layer.icon)) || GLYPH_BY_ID.get("pin");
+        // key 里带图标 id：图层换图标后要重新生成图片，不能一直用第一次的缓存。
+        const imageKey = `glyph-layer-${layer.id}-${glyph?.id ?? "pin"}`;
         if (!map.hasImage(imageKey)) {
-          const glyph = (layer.icon && GLYPH_BY_ID.get(layer.icon)) || GLYPH_BY_ID.get("pin");
-          const image = drawGlyphDot(layer.color || "#1668dc", glyph?.paths ?? []);
+          const image = drawFilledGlyph(layer.color || "#1668dc", glyph?.fill ?? [], {
+            fillRule: glyph?.fillRule,
+          });
           if (image) map.addImage(imageKey, image, { pixelRatio: 2 });
         }
         const sourceId = `layer-${layer.id}`;
@@ -1079,7 +1198,7 @@ export default function MapCanvas({
           layout: {
             "icon-image": imageKey,
             // 选中放大与地点标注同一套路：数据里带 selected，表达式自动跟着数据走
-            "icon-size": ["case", ["==", ["get", "selected"], 1], 1.25, 0.9],
+            "icon-size": ["case", ["==", ["get", "selected"], 1], 1.2, 0.85],
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
           },
@@ -1089,9 +1208,37 @@ export default function MapCanvas({
         if (map.getLayer(`${sourceId}-sym`)) {
           map.setPaintProperty(`${sourceId}-sym`, "icon-opacity", layer.opacity ?? 1);
         }
+        // POI 名称：低层级只显示当前选中的点，14 级以后才展开全部，
+        // 否则几十个采集点会互相压字。已经占用过的标签区域不再重复放。
+        for (const feature of features) {
+          const name = String(feature.properties?.name ?? "").trim();
+          if (!name) continue;
+          const selectedPoi = Number(feature.properties?.selected) === 1;
+          if (!showAllPoiNames && !selectedPoi) continue;
+          const coords = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
+          const point = map.project(coords);
+          const width = Math.min(160, name.length * 12 + 12);
+          const box = {
+            x1: point.x - width / 2,
+            y1: point.y + 14,
+            x2: point.x + width / 2,
+            y2: point.y + 32,
+          };
+          const overlap = labelBoxes.some(
+            (other) => box.x1 < other.x2 && box.x2 > other.x1 && box.y1 < other.y2 && box.y2 > other.y1,
+          );
+          if (!selectedPoi && overlap) continue;
+          const el = document.createElement("div");
+          el.className = `map-poi-label${selectedPoi ? " selected" : ""}`;
+          el.textContent = name;
+          layerLabelMarkers.current.push(
+            new maplibregl.Marker({ element: el, anchor: "top", offset: [0, 14] }).setLngLat(coords).addTo(map),
+          );
+          labelBoxes.push(box);
+        }
       }
 
-      // 只保留 source 与图标层：序号不再是独立圆形徽标，而是画在针形图标头部里
+      // 只保留 source 与图标层：图标本体直接画成实心图案，序号放到下方名称标签里
       const placesData: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: placeFeatures };
       const existingPlaces = map.getSource("places");
       if (existingPlaces) {
@@ -1136,7 +1283,7 @@ export default function MapCanvas({
           source: "places",
           layout: {
             "icon-image": ["get", "iconKey"],
-            "icon-size": ["case", ["get", "selected"], 1.38, 1.15],
+            "icon-size": ["case", ["get", "selected"], 1.3, 1.0],
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
           },
@@ -1489,9 +1636,7 @@ export default function MapCanvas({
             <div className="map-menu" ref={menuRef}>
               <div className="map-menu-head">
                 <span className="map-menu-title">{menu.mode === "edit" ? "编辑标注" : "在此添加地点"}</span>
-                <button type="button" className="map-menu-close" aria-label="关闭" onClick={() => setMenu(null)}>
-                  <IconClose />
-                </button>
+                <CloseButton onClick={() => setMenu(null)} />
               </div>
 
               <div className="map-menu-row">
@@ -1547,8 +1692,8 @@ export default function MapCanvas({
                           }
                         >
                           <svg viewBox={glyph.box} width={18} height={18} preserveAspectRatio="xMidYMid meet" aria-hidden>
-                            {glyph.paths.map((d) => (
-                              <path key={d} d={d} fill="none" stroke={color} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+                            {glyph.fill.map((d) => (
+                              <path key={d} d={d} fill={color} fillRule={glyph.fillRule ?? "nonzero"} />
                             ))}
                           </svg>
                         </button>
@@ -1602,28 +1747,34 @@ export default function MapCanvas({
 
       {pickMode ? (
         <div className="map-pick-hint">
+          <span className="map-hint-icon" aria-hidden>
+            <IconInfo width={14} height={14} />
+          </span>
           <span>在地图上点击选择位置，Esc 取消</span>
-          <button type="button" className="map-menu-close" aria-label="取消选点" onClick={() => onPickCancel?.()}>
-            <IconClose />
-          </button>
+          <CloseButton ariaLabel="取消选点" onClick={() => onPickCancel?.()} />
         </div>
       ) : null}
 
-      {conflictCount > 0 || (displayRoutes?.features.length ?? 0) > 0 ? (
-        <div className="map-hint">
-          {(displayRoutes?.features.length ?? 0) > 0 ? (
-            <span>
-              实线为最近一次查询的路网路线（仅本次会话显示，不入库）
-              {onClearRoutes ? (
-                <button type="button" onClick={() => onClearRoutes()}>
-                  清除路网
-                </button>
-              ) : null}
-            </span>
-          ) : (
-            "示意连线非实际路线"
-          )}
-          {conflictCount > 0 ? ` · ${conflictCount} 处时间冲突` : ""}
+      {(displayRoutes?.features.length ?? 0) > 0 || conflictCount > 0 ? (
+        <div className={`map-hint${conflictCount > 0 ? " warning" : ""}`} role="status">
+          <span className="map-hint-icon" aria-hidden>
+            {conflictCount > 0 ? <IconAlert width={14} height={14} /> : <IconInfo width={14} height={14} />}
+          </span>
+          <span className="map-hint-text">
+            {(displayRoutes?.features.length ?? 0) > 0 ? (
+              <>
+                地图上显示最近一次查询的路线
+                {onClearRoutes ? (
+                  <button type="button" onClick={() => onClearRoutes()}>
+                    清除路线
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              "示意连线，不是实际路线"
+            )}
+            {conflictCount > 0 ? ` · ${conflictCount} 处时间冲突` : ""}
+          </span>
         </div>
       ) : null}
 

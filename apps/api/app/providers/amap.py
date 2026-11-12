@@ -157,35 +157,63 @@ class AmapAdapter(HttpProvider, BaseAdapter):
             "radius": max(50, min(radius_m, 50000)),
             "page_size": min(limit, 25),
             "sortrule": "distance",
+            # v5 周边搜索的扩展字段统一走 show_fields：
+            # business 里才有电话/评分，区县 adname 虽然基础响应也会带，
+            # 但这里显式请求，避免不同账号或接口版本行为不一致。
+            "show_fields": "business",
         }
         if keywords:
             params["keywords"] = keywords
-        payload = self._get(_ENDPOINTS["around"], params)
         items: list[GeoItem] = []
-        for poi in payload.get("pois", []) or []:
-            location = _split_location(poi.get("location"))
-            geometry, approximate = to_wgs84(location, source_crs="GCJ02")
-            if not geometry:
-                continue
-            items.append(
-                GeoItem(
-                    provider=self.name,
-                    provider_id=poi.get("id"),
-                    name=str(poi.get("name") or "未命名地点"),
-                    category=(poi.get("type") or "").split(";")[0] or None,
-                    address=str(poi.get("address")) if poi.get("address") else None,
-                    geometry=geometry,
-                    source_crs="GCJ02",
-                    approximate=approximate,
-                    attribution="高德地图",
-                    raw_location=location,
-                    extra={
-                        "adname": poi.get("adname"),
-                        "distance": poi.get("distance"),
-                        "tel": poi.get("tel") or (poi.get("biz_ext") or {}).get("tel"),
-                    },
+        seen: set[str] = set()
+        page = 1
+        # v5 单页最多 25 条，limit 大于 25 时继续翻页；
+        # 周边采集一次多拿几页，重新采集时才能把较远的历史点位一起刷新。
+        page_size = min(limit, 25)
+        while len(items) < limit:
+            params["page_num"] = page
+            payload = self._get(_ENDPOINTS["around"], params)
+            pois = payload.get("pois") or []
+            if not pois:
+                break
+            for poi in pois:
+                provider_id = str(poi.get("id") or "")
+                if provider_id and provider_id in seen:
+                    continue
+                location = _split_location(poi.get("location"))
+                geometry, approximate = to_wgs84(location, source_crs="GCJ02")
+                if not geometry:
+                    continue
+                if provider_id:
+                    seen.add(provider_id)
+                items.append(
+                    GeoItem(
+                        provider=self.name,
+                        provider_id=poi.get("id"),
+                        name=str(poi.get("name") or "未命名地点"),
+                        category=(poi.get("type") or "").split(";")[0] or None,
+                        address=str(poi.get("address")) if poi.get("address") else None,
+                        geometry=geometry,
+                        source_crs="GCJ02",
+                        approximate=approximate,
+                        attribution="高德地图",
+                        raw_location=location,
+                        extra={
+                            "adname": poi.get("adname"),
+                            "distance": poi.get("distance"),
+                            # v5 的电话在 business.tel；旧版 v3 才在顶层 tel/biz_ext，
+                            # 三个位置都兼容，避免不同接口版本下电话再次变成空值。
+                            "tel": poi.get("tel")
+                            or (poi.get("biz_ext") or {}).get("tel")
+                            or (poi.get("business") or {}).get("tel"),
+                        },
+                    )
                 )
-            )
+                if len(items) >= limit:
+                    break
+            if len(pois) < page_size:
+                break
+            page += 1
         return items
 
     def suggest(self, q: str, *, city: str | None, limit: int = 10) -> list[GeoItem]:

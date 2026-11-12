@@ -169,12 +169,27 @@ html .ant-modal .ant-modal-close {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  opacity: 0.72;
+}
+html .ant-modal .ant-modal-close:hover {
+  background: var(--panel-3);
+  color: var(--text);
+  opacity: 1;
 }
 html .ant-modal .ant-modal-close-x {
   width: 24px;
   height: 24px;
   line-height: 24px;
   font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+html .ant-modal .ant-modal-close-icon {
+  font-size: 15px;
+  stroke-width: 2.2;
 }
 /* 整条标题栏都是拖动区，光标统一为拖动图案 */
 html .ant-modal .ant-modal-header {
@@ -224,12 +239,24 @@ html .ant-notification .ant-notification-notice-close {
   /* !important 不能省：antd 的 top 走 cssinjs，不加就被压回 20px */
   top: 10px !important;
   right: 8px !important;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  opacity: 0.72;
+}
+html .ant-notification .ant-notification-notice-close:hover {
+  background: var(--panel-3);
+  color: var(--text);
+  opacity: 1;
+}
+html .ant-notification .ant-notification-notice-close-x,
+html .ant-notification .ant-notification-notice-close-icon {
+  font-size: 15px;
 }
 /* Antd 6 把 message 的背景、内边距移到 .ant-message-notice 本身，
    原来的 .ant-message-notice-content 已不存在 */
@@ -932,6 +959,80 @@ html .ant-message .ant-message-notice {
   100% { transform: scale(1.9); opacity: 0; }
 }
 
+/* 地图名称标签：地点/行程点始终显示，POI 在较大比例尺或选中时显示。
+   标签由 DOM Marker 承载，pointer-events 关掉，避免挡住图标点击。 */
+.map-place-label,
+.map-poi-label,
+.route-distance-label {
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+.map-place-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 180px;
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--overlay);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.map-place-label b {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-num);
+  font-size: 10px;
+  line-height: 1;
+}
+.map-place-label span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.map-place-label.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent), var(--shadow-sm);
+}
+.map-poi-label {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 16px;
+}
+.map-poi-label.selected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.route-distance-label {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-num);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* 选中标注：两圈错相波纹，动画与搜索结果预览点一致，不挡鼠标 */
 .select-ripple {
   position: relative;
@@ -1501,10 +1602,11 @@ html .ant-message .ant-message-notice {
   background: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
-/* 浮层标题行右侧的关闭图标（取消按钮统一改成它） */
-.map-menu-close {
-  width: 22px;
-  height: 22px;
+/* 全站统一关闭按钮：24×24 点击区域、15px 图标、2.2 描边。
+   地图浮层、选点提示、AntD 弹窗和通知都按这一套视觉对齐。 */
+.app-close {
+  width: 24px;
+  height: 24px;
   flex: none;
   margin-left: auto;
   display: inline-flex;
@@ -1514,20 +1616,25 @@ html .ant-message .ant-message-notice {
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--muted);
+  color: var(--text);
+  opacity: 0.72;
   cursor: pointer;
 }
-.map-menu-close svg {
+.app-close svg {
   display: block;
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
 }
-.map-menu-close:hover {
+.app-close:hover {
   background: var(--panel-3);
   color: var(--text);
+  opacity: 1;
 }
 /* 点击图层标注弹出的点位信息：完全复用 .map-menu 的外观与宽度；缺失值用占位符保持结构 */
-/* 与右键浮层对齐：标题 13px 加粗，正文 14px，按钮 13px */
+/* 标题和正文同字号，区别只在字重 */
 .map-menu-info .map-menu-title {
-  font-size: var(--fs-13);
+  font-size: var(--fs-14);
   font-weight: 700;
 }
 .map-menu-info .map-menu-row b {
@@ -1538,11 +1645,14 @@ html .ant-message .ant-message-notice {
   overflow-wrap: anywhere;
   text-align: right;
 }
-.map-menu-info .map-menu-close {
-  font-size: var(--fs-13);
-}
-.map-pick-hint .map-menu-close {
+.map-pick-hint .app-close {
+  /* 选点提示里的按钮规则会给所有 button 加边框和内边距，这里按统一关闭按钮重置 */
+  width: 24px;
+  height: 24px;
   margin-left: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 .map-hint button {
   margin-left: 8px;
@@ -1785,8 +1895,9 @@ html .ant-message .ant-message-notice {
   margin-bottom: 2px;
   border-bottom: 1px solid var(--line);
   color: var(--text);
-  font-size: var(--fs-13);
-  font-weight: 600;
+  /* 标题与正文统一 14px，靠字重区分层级 */
+  font-size: var(--fs-14);
+  font-weight: 700;
 }
 /* 标题前的蓝色装饰条，与面板标题、弹窗标题同一套 */
 .map-menu-title {
@@ -2035,7 +2146,10 @@ html .ant-message .ant-message-notice {
   left: 8px;
   bottom: 8px;
   max-width: calc(100% - 320px);
-  padding: 3px 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 5px 9px;
   border-radius: var(--radius);
   background: var(--overlay);
   border: 1px solid var(--line);
@@ -2043,6 +2157,19 @@ html .ant-message .ant-message-notice {
   font-size: 12px;
   line-height: 1.5;
   box-shadow: var(--shadow-sm);
+}
+/* 提示条最前面的状态图标：信息用主色，警告用琥珀色 */
+.map-hint-icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: 1px;
+  color: var(--accent);
+}
+.map-hint.warning .map-hint-icon {
+  color: var(--amber);
+}
+.map-hint-text {
+  min-width: 0;
 }
 
 .marker-pin {

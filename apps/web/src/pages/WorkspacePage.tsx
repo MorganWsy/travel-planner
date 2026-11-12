@@ -19,6 +19,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { api, type GeoResult, type JobOut, type OptimizationResult, type RouteCandidate, type TripDetail } from "../api/api";
 import { ApiError, errorText } from "../api/client";
 import { notify } from "../lib/notify";
+import { formatDistance } from "../lib/coords";
 import MapCanvas from "../components/MapCanvas";
 import SearchPanel from "../components/SearchPanel";
 import DayPanel from "../components/DayPanel";
@@ -41,6 +42,9 @@ const ROUTE_MODES: Array<{ value: RouteMode; label: string }> = [
 const ROUTE_MODE_LABEL: Record<RouteMode, string> = Object.fromEntries(
   ROUTE_MODES.map((item) => [item.value, item.label]),
 ) as Record<RouteMode, string>;
+// 界面不直接显示供应商内部 id，避免“来源 amap”这类技术字样
+const PROVIDER_LABEL: Record<string, string> = { amap: "高德地图", tianditu: "天地图", manual: "手工" };
+const providerLabel = (value: string) => PROVIDER_LABEL[value] ?? value;
 // 高德公交换乘策略：5 不乘地铁、7 地铁优先，可用于把地铁和普通公交分开看
 const TRANSIT_STRATEGIES: Array<{ value: number; label: string }> = [
   { value: 0, label: "推荐" },
@@ -122,7 +126,7 @@ export default function WorkspacePage() {
     () =>
       trip
         ? buildOrder(trip)
-        : { byStop: new Map<string, number>(), byPlace: new Map<string, { number: number; stopId: string }>() },
+        : { byStop: new Map<string, number>(), byPlace: new Map<string, { number: number; stopId: string; title?: string }>() },
     [trip],
   );
 
@@ -500,7 +504,19 @@ export default function WorkspacePage() {
         features: [
           ...prev.features.filter((feature) => feature.properties?.pair !== pair),
           ...(candidate.geometry
-            ? [{ type: "Feature" as const, properties: { pair, mode: routeMode }, geometry: candidate.geometry as unknown as GeoJSON.LineString }]
+            ? [
+                {
+                  type: "Feature" as const,
+                  // 距离/耗时跟着会话路线一起走：地图中段显示距离，保存后右栏卡片复用同一份数据。
+                  properties: {
+                    pair,
+                    mode: routeMode,
+                    distance_m: candidate.distance_m,
+                    duration_seconds: candidate.duration_seconds,
+                  },
+                  geometry: candidate.geometry as unknown as GeoJSON.LineString,
+                },
+              ]
             : []),
         ],
       }));
@@ -516,7 +532,9 @@ export default function WorkspacePage() {
         from_stop_id: routeOpen.from,
         to_stop_id: routeOpen.to,
         duration_seconds: Math.max(0, manualMinutes) * 60,
-        label: routeResult ? `${ROUTE_MODE_LABEL[routeMode]} · ${routeResult.provider}` : "手工录入",
+        // 查询过路线时把真实距离一并保存，右栏卡片才能显示「X 公里」
+        distance_m: routeResult?.distance_m ?? undefined,
+        label: routeResult ? `${ROUTE_MODE_LABEL[routeMode]} · ${providerLabel(routeResult.provider)}` : "手工录入",
       }),
     ).catch((error) => notify.error(errorText(error)));
     setRouteOpen(null);
@@ -1097,11 +1115,11 @@ export default function WorkspacePage() {
               />
             </Field>
           ) : null}
-          <Button onClick={queryRoute} loading={busy}>
-            查询路网路线
+          <Button type="primary" onClick={queryRoute} loading={busy}>
+            查询路线
           </Button>
           <div className="muted tiny">
-            查询成功后地图立即画出真实路网：仅本次会话显示、不入库不导出；关闭本窗后仍保留，点地图上方提示条的「清除路网」可移除。
+            查询结果会显示在地图上；保存后会把耗时和距离写入右栏行程。
           </div>
           {routeError ? <div className="hint-box">{routeError}</div> : null}
           {routeResult ? (
@@ -1111,9 +1129,9 @@ export default function WorkspacePage() {
                 <span>分钟</span>
               </div>
               <div className="route-result-cells">
-                <div><span>距离</span><b>{(routeResult.distance_m / 1000).toFixed(1)} km</b></div>
+                <div><span>距离</span><b>{formatDistance(routeResult.distance_m)}</b></div>
                 <div><span>方式</span><b>{ROUTE_MODE_LABEL[routeMode]}</b></div>
-                <div><span>来源</span><b>{routeResult.provider}</b></div>
+                <div><span>来源</span><b>{providerLabel(routeResult.provider)}</b></div>
               </div>
             </div>
           ) : null}
@@ -1263,11 +1281,14 @@ function buildOrder(trip: TripDetail) {
     rankOf(a) !== rankOf(b) ? rankOf(a) - rankOf(b) : a.position - b.position,
   );
   const byStop = new Map<string, number>();
-  const byPlace = new Map<string, { number: number; stopId: string }>();
+  const byPlace = new Map<string, { number: number; stopId: string; title?: string }>();
   ordered.forEach((stop, index) => {
     const number = index + 1;
     byStop.set(stop.id, number);
-    if (stop.place_id && !byPlace.has(stop.place_id)) byPlace.set(stop.place_id, { number, stopId: stop.id });
+    // 同一个地点被多个事项引用时，标注显示第一次出现的编号和标题。
+    if (stop.place_id && !byPlace.has(stop.place_id)) {
+      byPlace.set(stop.place_id, { number, stopId: stop.id, title: stop.title });
+    }
   });
   return { byStop, byPlace };
 }
