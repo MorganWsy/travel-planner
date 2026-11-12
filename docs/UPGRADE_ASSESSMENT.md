@@ -1,6 +1,6 @@
 # 技术栈升级评估（2026-11-12）
 
-本文只做版本核实与升级设计，**尚未修改任何依赖、尚未执行安装或构建**。实际安装、构建和提交需要确认后执行。
+本文记录版本核实、升级设计与执行进展。**2026-11-12 已完成第 0 步基线与第 1 步工具链升级**：Vite 8.3.8、`@vitejs/plugin-react` 6.3.0、TypeScript 7.0.2 已安装并通过类型检查与构建；React 19 / AntD 6 / Router 7 / MapLibre 6 / 后端依赖尚未升级。
 
 ## 1. 结论
 
@@ -11,6 +11,16 @@
 3. **Vite 8 切换到 Rolldown/Oxc**，当前 `manualChunks` 对象写法需要调整；TypeScript 7 的原生编译器也会对旧 `tsconfig` 选项更严格。
 
 推荐分四步走：**先冻结基线 → 再升级工具链 → 再升级 UI/React → 最后升级 MapLibre 与后端依赖**。每一步都能独立回滚，不要把所有大版本塞进一个无法定位问题的提交。
+
+### 1.1 已执行（2026-11-12）
+
+- 用 `pip freeze` 把当前 Python 环境冻结到 `apps/api/requirements.lock.txt`（50 行，含全部传递依赖）。
+- 基线复跑：纯逻辑测试 16 passed；全量 `pytest tests -q` 为 16 passed / 16 skipped（未设置 `TEST_DATABASE_URL`，集成测试按设计跳过）；`pip check` 无冲突；前端 `pnpm typecheck`、`pnpm build` 均通过。
+- 升级 `vite@8.3.8`、`@vitejs/plugin-react@6.3.0`、`typescript@7.0.2`，React/AntD/MapLibre/Router 保持不变。
+- `vite.config.ts` 从对象形式 `manualChunks` 改为 `build.rolldownOptions.output.codeSplitting.groups`，保留 react / maplibre / antd 三个 vendor 分块。
+- `tsconfig.json` 删除未使用的 `baseUrl`/`paths`；`src/vite-env.d.ts` 显式引用 `@types/geojson`，因为 TS 7 不再自动把它的全局命名空间带进项目。
+- 验证结果：`pnpm peers check` 无问题；`pnpm build` 约 0.7s 完成，MapLibre 与 AntD chunk 各约 1MB；Vite 8 开发服务器和 FastAPI 托管的生产构建都能打开登录页；演示账号登录后行程列表、工作台、地图画布、时间线均正常，控制台无 pageerror。
+- 发现并处理一个真实阻塞：`openapi-typescript@7.13.0` 的 peer 仍是 TypeScript `^5.x`，运行时会调用 TS 5 的 `ts.factory`，在 TS 7 下必崩。已把它从应用 `devDependencies` 移除，改为 `pnpm codegen:api`：通过 `pnpm dlx` 隔离安装 TypeScript 5.9.3 + openapi-typescript 7.13.0，不污染应用的 TS 7。
 
 ## 2. 核实方法
 
@@ -29,9 +39,9 @@
 | Node.js | 22.18.0 | 24 LTS（建议） | 大版本 | 低；Vite 8 最低要求已满足 |
 | pnpm | 11.1.0 | 12.18.0 | 大版本 | 低；锁文件格式会变 |
 | React / React DOM | 18.3.1 | 19.3.1 | 大版本 | 中；类型与少量 API |
-| TypeScript | 5.9.3 | 7.0.2 | 两个大版本 | 中高；原生编译器、旧配置项 |
-| Vite | 6.4.5 | 8.3.8 | 两个大版本 | 高；Rolldown、配置变更 |
-| `@vitejs/plugin-react` | 4.7.0 | 6.3.0 | 两个大版本 | 高；要求 Vite 8 |
+| TypeScript | 7.0.2（已升级） | 7.0.2 | 已完成 | 低；应用 typecheck/build 已通过；旧编译器 API 仍需隔离 |
+| Vite | 8.3.8（已升级） | 8.3.8 | 已完成 | 低；Rolldown 构建、开发服务器已冒烟 |
+| `@vitejs/plugin-react` | 6.3.0（已升级） | 6.3.0 | 已完成 | 低；与 Vite 8 配套 |
 | Ant Design | 5.29.3 | 6.7.0 | 大版本 | 高；DOM/CSS 变量/视觉回归 |
 | `@ant-design/icons` | 5.6.1 | 6.3.4 | 大版本 | 中；必须与 AntD 6 配套 |
 | MapLibre GL JS | 5.24.0 | 6.18.0 | 大版本 | 高；ESM-only、WebGL2、类型 |
@@ -42,7 +52,7 @@
 | `@types/react` | 18.3.12 | 19.3.0 | 大版本 | 中；移除 pnpm override |
 | `@types/react-dom` | 18.3.1 | 19.3.0 | 大版本 | 中 |
 | `@types/node` | 未显式声明 | 26.6.6 | — | 低；Vite 8 可选 peer |
-| openapi-typescript | 7.13.0 | 7.13.0 | 已最新 | 低 |
+| openapi-typescript | 7.13.0（隔离使用） | 7.13.0 | 已最新 | 中；不支持 TS 7，需在独立 TS 5.9.3 环境运行 |
 
 ### 3.2 后端
 
@@ -65,17 +75,17 @@
 | httpx | 0.28.1 | 0.28.1 | 已最新 |
 | numpy | 2.5.4 | 2.5.4 | 已最新 |
 
-> 后端最大的问题不是版本旧，而是**仓库没有 `requirements.txt` / `pyproject.toml` / `uv.lock`**。当前 venv 无法从仓库可重复重建。升级前必须先把现有环境冻结成清单，否则“升级失败”时连原样都回不去。
+> 后端最大的问题不是版本旧，而是此前**仓库没有 `requirements.txt` / `pyproject.toml` / `uv.lock`**。2026-11-12 已用 `pip freeze` 冻结到 `apps/api/requirements.lock.txt`，可以从仓库复现当前 venv；后续是否迁移到 `uv` 另议。
 
-## 4. 为什么当前会停在旧版本？
+## 4. 为什么此前停留在旧版本？
 
 不是这些版本“不能用新版本”，而是上一轮选型优先选择了当时互相验证过的组合：
 
 - React 18 + Ant Design 5 是成熟组合；DELIVERY 记录过“AntD 5 与 React 19 的组合存在告警风险，先用成熟组合”。
-- Vite 6 与 `@vitejs/plugin-react` 4 配套；Vite 8 需要 plugin-react 6。
-- TypeScript 5.9 是 Vite 6 时代的稳定选择。用户提到的“TypeScript 6”实际是 **5 → 7 的过渡/兼容桥接版本**，不是功能上的下一代；当前 npm 最新是 **7.0.2**。
+- Vite 6 与 `@vitejs/plugin-react` 4 配套；Vite 8 需要 plugin-react 6。**2026-11-12 已升级到 Vite 8.3.8 + plugin-react 6.3.0。**
+- TypeScript 5.9 是 Vite 6 时代的稳定选择。用户提到的“TypeScript 6”实际是 **5 → 7 的过渡/兼容桥接版本**，不是功能上的下一代；**2026-11-12 已升级到 7.0.2**。
 - MapLibre 5 是当前地图代码验证过的版本；MapLibre 6 改 ESM-only 和 WebGL2，属于需要专门回归的升级。
-- 后端没有锁文件，依赖是“装好能用”状态，没有被持续升级。
+- 后端此前没有锁文件，依赖是“装好能用”状态，没有被持续升级；现在已冻结基线。
 
 所以答案是：**能改，而且现在适合改；但要把“升级”当成一次有验证门槛的迁移，而不是改版本号。**
 
@@ -83,15 +93,16 @@
 
 ### 5.1 TypeScript 7.0
 
-- TS 7 是原生编译器（Go 实现），稳定版暂不提供旧版编译器 API；如果工具有 `import ts from "typescript"` 之类的用法，需要等 7.1 或改用 CLI。本项目目前只用 `tsc` 做类型检查，不直接调用编译器 API，影响较小。
-- 旧配置项会收紧：`baseUrl`、`moduleResolution: "node"/"node10"` 等需要调整。当前 `apps/web/tsconfig.json` 有 `baseUrl` 和 `paths`，但源码里没有使用 `@/` 别名（已核对），可以直接删除这两项。
+- TS 7 是原生编译器（Go 实现），稳定版不提供旧版编译器 API。本项目自身只用 `tsc`，没有直接调用编译器 API；但 `openapi-typescript@7.13.0` 会调用 `ts.factory`，实测在 TS 7 下直接崩溃。已改为 `pnpm codegen:api`，用 `pnpm dlx` 在独立环境安装 TypeScript 5.9.3 + openapi-typescript 7.13.0。
+- TS 7 不再自动把 `@types/geojson` 的全局命名空间带入项目，`GeoJSON.Feature` 等类型会报 `TS2503`。已在 `src/vite-env.d.ts` 显式加入 `/// <reference types="geojson" />`。
+- 旧配置项会收紧：`baseUrl`、`moduleResolution: "node"/"node10"` 等需要调整。`apps/web/tsconfig.json` 原有 `baseUrl` 和 `paths`，但源码没有使用 `@/` 别名（已核对），已删除这两项。
 - `tsc -b` 仍可用；但若引入 project references，需要 `composite` 等配置。
 - 升级后先跑 `pnpm typecheck`，不要直接跑 build，便于把类型错误和打包错误分开。
 
 ### 5.2 Vite 8 + plugin-react 6
 
 - Node 要求 `^20.19.0 || >=22.12.0`；当前 Node 22.18.0 满足，Node 24 LTS 更稳妥。
-- Vite 8 使用 Rolldown/Oxc；`build.rollupOptions.output.manualChunks` 的**对象形式**不再适用。当前 `vite.config.ts` 正是对象形式，需要改成函数形式或 Rolldown 的 `advancedChunks` 分组。
+- Vite 8 使用 Rolldown/Oxc；`build.rollupOptions.output.manualChunks` 的对象形式已被移除，函数形式也已弃用。本次已改用 `build.rolldownOptions.output.codeSplitting.groups`（react / maplibre / antd 三组），构建产物分块与升级前一致。`build.rollupOptions` 本身也已改名为 `build.rolldownOptions`。
 - `@vitejs/plugin-react@6` 的 peer 要求 Vite `^8.0.0`，不能只升 Vite 不升插件。
 - 建议同时检查 `chunkSizeWarningLimit`、产物文件名和 sourcemap 行为；升级后对比 chunk 体积。
 
@@ -135,25 +146,25 @@
 
 ## 6. 推荐升级顺序
 
-### 第 0 步：建立可回滚基线（必须先做）
+### 第 0 步：建立可回滚基线（已完成 2026-11-12）
 
-1. 确认当前 `pnpm-lock.yaml` 与 `apps/api/.venv` 可用。
-2. 生成 Python 依赖清单：优先 `uv`（方案指定），没有 uv 就 `pip freeze > requirements.lock.txt`。
-3. 运行一次基线验证：
-   - `pnpm typecheck` / `pnpm build`
-   - `pytest tests -q`（需要 `TEST_DATABASE_URL` 指向 PostGIS 测试库）
-   - 手动冒烟：登录 → 工作台 → 地图 → 导出 → 分享 → 历史。
-4. 记录构建产物体积、页面截图、测试通过数。
-5. 提交当前状态，确保任何升级都能 `git diff` 定位、能回滚。
+1. 已确认 `pnpm-lock.yaml` 与 `apps/api/.venv` 可用；Git 基线为 `35a64b1`。
+2. 已生成 `apps/api/requirements.lock.txt`（`pip freeze`，50 行）。本机没有 `uv`，暂不引入。
+3. 已运行基线验证：
+   - `pnpm typecheck` / `pnpm build` 通过（Vite 6 基线，构建 9.3s）。
+   - 纯逻辑 `pytest` 16 passed；全量 16 passed / 16 skipped，原因是未设置 `TEST_DATABASE_URL`。
+   - 手动冒烟：登录 → 行程列表 → 工作台 → 地图画布 → 时间线。
+4. 已记录构建产物体积和测试通过数；不把运行数据或截图提交进仓库。
+5. 基线已提交并推送，后续升级可用 `git diff` 定位与回滚。
 
-### 第 1 步：工具链（Node / pnpm / Vite / TS）
+### 第 1 步：工具链（Node / pnpm / Vite / TS）（已完成 2026-11-12）
 
-1. 安装 Node 24 LTS（可选；Node 22.18 已满足 Vite 8 最低要求）。
-2. 升级 pnpm 到 12.x。
-3. 升级 `vite@8`、`@vitejs/plugin-react@6`、`typescript@7`。
-4. 修改 `vite.config.ts` 的 `manualChunks`；修改 `tsconfig.json`，删除 `baseUrl`/`paths`。
-5. 只跑类型检查和构建，不碰 React/AntD/MapLibre。
-6. 通过后提交一个“工具链升级”提交。
+1. Node 保持 22.18.0（满足 Vite 8 的 `^20.19.0 || >=22.12.0`）；pnpm 保持 11.1.0，升级 12.x 另开任务。
+2. 已升级 `vite@8.3.8`、`@vitejs/plugin-react@6.3.0`、`typescript@7.0.2`。
+3. `vite.config.ts` 已改用 `build.rolldownOptions.output.codeSplitting.groups`；`tsconfig.json` 已删除 `baseUrl`/`paths`；`vite-env.d.ts` 显式引用 geojson。
+4. 已验证：`pnpm peers check` 无问题、`pnpm typecheck` 0 错、`pnpm build` 通过（约 0.7s）、Vite 8 开发服务器与生产构建均可打开登录页，演示账号可进入工作台和地图。
+5. `openapi-typescript` 已隔离到 `pnpm codegen:api` 的 TS 5.9.3 环境。
+6. React/AntD/MapLibre/Router 未改，留到第 2、3 步。
 
 ### 第 2 步：React / Router / AntD / 状态库
 
@@ -194,26 +205,28 @@
 
 ## 7. 验证清单
 
+> 以下勾选只代表 2026-11-12 工具链升级批次已完成的项，不代表整个产品验收完成；未勾选项仍需在后续 React/AntD/MapLibre/后端升级或完整验收时执行。
+
 ### 7.1 前端
 
-- [ ] `pnpm install` 无 peer 冲突；锁文件已更新并提交。
-- [ ] `pnpm typecheck` 0 错。
-- [ ] `pnpm build` 通过；记录 chunk 体积，MapLibre/AntD 不异常膨胀。
-- [ ] `pnpm dev` 启动，`/api` 代理正常。
-- [ ] 登录/注册/验证码/退出。
-- [ ] 工作台：地图三种底图、标注、右键新增、测距、指北针、图层、路线显示。
+- [x] `pnpm install` 无 peer 冲突；`pnpm-lock.yaml` 已更新。
+- [x] `pnpm typecheck` 0 错。
+- [x] `pnpm build` 通过；MapLibre/AntD chunk 各约 1MB，与升级前接近。
+- [x] `pnpm dev` 启动，`/api` 代理正常。
+- [ ] 登录/注册/验证码/退出（本次只验证了演示账号登录与工作台，未回归注册/验证码 UI）。
+- [ ] 工作台：地图三种底图、标注、右键新增、测距、指北针、图层、路线显示（本次只验证地图画布与时间线渲染）。
 - [ ] AntD：Modal、Tooltip、Notification、Table、Tabs、DatePicker、TimePicker、Select、Button、Input。
 - [ ] 深浅主题各走一遍；无残留深色气泡/错位箭头。
 - [ ] 攻略预览、导出、历史版本、恢复、分享解锁/复制。
 - [ ] 设置页：地图 Key 掩码/保存/测试、账号、会话。
 - [ ] 390×844 手机视口无横向溢出；核心操作不依赖拖拽。
-- [ ] 浏览器控制台无 pageerror；无 MapLibre/React 警告。
+- [x] 浏览器控制台无 pageerror（登录页、行程列表、工作台、生产构建均已检查）。
 
 ### 7.2 后端
 
-- [ ] `pip check` 无冲突；`python -c "from app.main import app"` 成功。
-- [ ] `pytest tests -q` 全部通过（含 PostgreSQL/PostGIS 集成）。
-- [ ] `scripts/gen_openapi.py` 生成成功；`openapi-typescript` 生成类型无意外 diff。
+- [x] `pip check` 无冲突；`python -c "from app.main import app"` 成功。
+- [ ] `pytest tests -q` 全部通过（含 PostgreSQL/PostGIS 集成）；当前 16 passed / 16 skipped，缺 `TEST_DATABASE_URL`。
+- [x] `scripts/gen_openapi.py` 生成成功；`pnpm codegen:api` 生成类型无意外 diff。
 - [ ] 登录/会话/CSRF/限流/越权 404。
 - [ ] 行程写事务、If-Match 409/428、快照、恢复。
 - [ ] 时间线冲突、优化任务、任务取消/重试。
@@ -223,11 +236,11 @@
 
 ### 7.3 发布前
 
-- [ ] 锁文件（`pnpm-lock.yaml`、`uv.lock` 或 `requirements.lock.txt`）已提交。
+- [x] 锁文件（`apps/web/pnpm-lock.yaml`、`apps/api/requirements.lock.txt`）已更新并随本批提交。
 - [ ] 容器镜像/数据库版本固定，不用 `latest`。
 - [ ] `.env`、`data/`、`*.tsbuildinfo`、`.workbuddy/`、Edge profile 未被提交。
 - [ ] 前端包、接口响应、日志中无服务端 Key。
-- [ ] 升级说明和回滚步骤写入 README / DELIVERY。
+- [x] 升级说明和回滚步骤写入 README / DELIVERY。
 
 ## 8. 风险与应对
 
@@ -244,30 +257,28 @@
 | AntD 6 / React 19 类型冲突 | 中 | 删除 `@types/react` 18 override；统一 19.3.x |
 | 视觉变化被当成 bug | 低 | 先记录基线截图；升级后逐页对比，接受合理变化并记录 |
 
-## 9. 需要确认的决策
+## 9. 待确认的决策（更新于 2026-11-12）
 
-在开始改依赖前，请确认以下事项：
+1. **升级范围**：工具链已单独完成；下一步建议先做 React / Router / AntD，再做 MapLibre，最后处理后端依赖。
+2. **Node 版本**：本次保持 Node 22.18.0（满足 Vite 8 要求）；是否安装 Node 24 LTS 待定。
+3. **pnpm 版本**：本次保持 11.1.0；是否升级 12.18.0 待定，升级会改动锁文件格式。
+4. **Docker**：尚未安装；是否现在安装 Docker Desktop + WSL2、先补 PostgreSQL/PostGIS Compose，待确认。
+5. **AntD 6 视觉变化**：是否接受默认视觉调整，需要预留逐组件调样式的时间。
+6. **Python 依赖管理**：本次用 `requirements.lock.txt` 冻结全部依赖；是否迁移到 `uv`/`uv.lock` 待定，本机目前没有 `uv`。
 
-1. **升级范围**：前端 + 后端一起做，还是先做前端？建议先前端工具链/UI/地图，后端单独一批。
-2. **Node 版本**：是否安装 Node 24 LTS？当前 22.18.0 已满足 Vite 8，不装也能做。
-3. **Docker**：是否现在安装 Docker Desktop + WSL2？如果现在装，我可以先补一个只含 PostgreSQL/PostGIS 的 Compose，降低测试库门槛。
-4. **AntD 6 视觉变化**：是否接受 AntD 6 带来的默认视觉调整？如果不接受，需要预留逐组件调样式的时间。
-5. **Python 依赖管理**：用 `uv`（方案指定）还是先用 `requirements.txt` 精确锁？本机目前没有 `uv`。
-
-## 10. 建议的第一批实际改动（待确认后执行）
-
-如果确认升级，我建议第一个提交只做“可回滚的基础设施”，不碰业务逻辑：
+## 10. 已执行的第一批实际改动（2026-11-12）
 
 ```text
-chore(web): freeze baseline and upgrade toolchain
-- 记录当前依赖/构建/测试基线
-- 升级 vite 8、@vitejs/plugin-react 6、typescript 7
-- 调整 vite.config.ts 的 manualChunks
-- 移除 tsconfig 的 baseUrl/paths
-- 不改 React/AntD/MapLibre
+chore(web): upgrade toolchain to vite 8 and typescript 7
+- freeze Python environment to apps/api/requirements.lock.txt
+- upgrade vite 8.3.8, @vitejs/plugin-react 6.3.0, typescript 7.0.2
+- migrate manualChunks to Rolldown codeSplitting groups
+- remove tsconfig baseUrl/paths and reference @types/geojson explicitly
+- isolate openapi-typescript under TypeScript 5.9.3 via pnpm dlx
+- keep React 18 / AntD 5 / MapLibre 5 / Router 6 unchanged
 ```
 
-第二个提交再升级 React/AntD/Router，第三个提交升级 MapLibre，第四个提交处理后端依赖与锁文件。这样每一层都能单独验证、单独回滚。
+第二个提交再升级 React/AntD/Router，第三个提交升级 MapLibre，第四个提交处理后端依赖。这样每一层都能单独验证、单独回滚。
 
 ---
 

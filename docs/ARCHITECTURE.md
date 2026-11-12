@@ -407,8 +407,8 @@ HTTP 请求
 | pnpm | 11.1.0 |
 | Python | 3.13.14（`apps/api/.venv`） |
 | React / React DOM | 18.3.1 |
-| TypeScript | 5.9.3 |
-| Vite | 6.4.5 |
+| TypeScript | 7.0.2 |
+| Vite | 8.3.8 |
 | MapLibre GL JS | 5.24.0 |
 | Ant Design | 5.29.3 |
 | Zustand | 5.0.16 |
@@ -419,13 +419,13 @@ HTTP 请求
 | Pydantic | 2.14.2 |
 | PostgreSQL / PostGIS | 17 / 3（交付记录） |
 
-最新稳定版、破坏性变更和推荐升级顺序见 [UPGRADE_ASSESSMENT.md](UPGRADE_ASSESSMENT.md)。
+2026-11-12 已完成工具链升级（Vite 8 / plugin-react 6 / TypeScript 7）；React 19、AntD 6、Router 7、MapLibre 6 和后端依赖尚未升级。锁文件：`apps/web/pnpm-lock.yaml`、`apps/api/requirements.lock.txt`。最新稳定版、破坏性变更和推荐升级顺序见 [UPGRADE_ASSESSMENT.md](UPGRADE_ASSESSMENT.md)。
 
 ## 10. 常见改动入口
 
 | 想改什么 | 先看哪里 |
 | --- | --- |
-| 新增一个 API | `apps/api/app/routers/*.py` + `schemas.py` + `main.py` 注册；再跑 `scripts/gen_openapi.py` 和 `openapi-typescript` |
+| 新增一个 API | `apps/api/app/routers/*.py` + `schemas.py` + `main.py` 注册；再跑 `scripts/gen_openapi.py` 和 `pnpm codegen:api` |
 | 改行程内容/版本逻辑 | `services/trip_content.py`（commit/build_snapshot/restore） |
 | 改时间线规则 | `services/timeline.py` + `tests/test_schedule.py` |
 | 改优化 | `services/optimize.py` + `services/runners.py` + `tests` |
@@ -438,16 +438,15 @@ HTTP 请求
 
 ## 11. 已知技术债与风险
 
-1. **没有 Python 依赖清单/锁文件**：无法从仓库可重复重建 venv，升级前必须先冻结。
-2. **没有数据库迁移**：`create_all` 只适合开发；上线前需要 Alembic 基线。
-3. **任务队列是进程内线程池**：多副本、重启恢复和长任务隔离不足；换 RQ 是明确后续项。
-4. **限流是进程内**：多副本部署会失效，需要 Redis 等共享存储。
-5. **快照未包含图层**：分享/历史/导出看不到专题图层，和 API 契约中的 `TripDetail.map_layers` 有差异。
-6. **`styles.css` 深度覆盖 Ant Design DOM**：AntD 大版本升级必须做视觉回归。
-7. **地图组件体量大**：`MapCanvas.tsx` 职责多，后续可拆为底图、标注、测量、图层、路线子模块。
-8. **供应商持久化策略保守**：路线几何默认不落库，刷新后重查；这是合规选择，不是 bug。
-9. **前端版本组合偏旧**：React 18 / Vite 6 / AntD 5 / MapLibre 5 / TS 5.9，升级路径见评估文档。
-10. **缺少容器化**：本机依赖直装 PostgreSQL/Node/Python，换机成本高；用户已表示可安装 Docker，建议补 Compose。
+1. **数据库迁移仍是 `create_all`**：只适合开发；上线前需要 Alembic 基线。Python 依赖已冻结到 `apps/api/requirements.lock.txt`。
+2. **任务队列是进程内线程池**：多副本、重启恢复和长任务隔离不足；换 RQ 是明确后续项。
+3. **限流是进程内**：多副本部署会失效，需要 Redis 等共享存储。
+4. **快照未包含图层**：分享/历史/导出看不到专题图层，和 API 契约中的 `TripDetail.map_layers` 有差异。
+5. **`styles.css` 深度覆盖 Ant Design DOM**：AntD 大版本升级必须做视觉回归。
+6. **地图组件体量大**：`MapCanvas.tsx` 职责多，后续可拆为底图、标注、测量、图层、路线子模块。
+7. **供应商持久化策略保守**：路线几何默认不落库，刷新后重查；这是合规选择，不是 bug。
+8. **前端其余大版本待升级**：工具链已到 Vite 8 / TS 7；React 18、AntD 5、MapLibre 5、Router 6 仍在旧大版本，升级路径见评估文档。
+9. **缺少容器化**：本机依赖直装 PostgreSQL/Node/Python，换机成本高；用户已表示可安装 Docker，建议补 Compose。
 
 ## 12. 术语
 

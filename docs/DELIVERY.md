@@ -13,7 +13,7 @@
 ## 2. 架构落地
 
 ```text
-浏览器 (React 18.3.1 + Vite 6 + antd 5 + MapLibre 5；升级评估见 docs/UPGRADE_ASSESSMENT.md)
+浏览器 (React 18.3.1 + Vite 8.3.8 + TypeScript 7.0.2 + antd 5 + MapLibre 5；升级评估见 docs/UPGRADE_ASSESSMENT.md)
    │  Cookie 会话 + X-CSRF-Token
    ▼
 FastAPI (同步端点，线程池执行) ── SQLAlchemy 2 ── PostgreSQL 17 / PostGIS 3
@@ -69,7 +69,24 @@ Key 通过设置页写入 `app_settings` 表，使用 `SESSION_SECRET` 派生的
 
 ## 6. 验证记录
 
-实测（本机，2026-11-04；2026-11-12 未重新运行，以下为历史记录，不代表当前依赖升级后的结果）：
+### 6.1 工具链升级验证（2026-11-12）
+
+| 检查 | 命令 | 结果 |
+| --- | --- | --- |
+| 后端纯逻辑测试 | `pytest tests/test_coords.py tests/test_schedule.py tests/test_guide.py -q` | 16 passed |
+| 后端全量测试 | `pytest tests -q` | 16 passed / 16 skipped（未设置 `TEST_DATABASE_URL`，集成用例按设计跳过） |
+| Python 依赖一致性 | `pip check` | No broken requirements found |
+| 前端 peer 依赖 | `pnpm peers check` | 无问题（`openapi-typescript` 移出应用依赖后） |
+| 前端类型检查 | `pnpm typecheck`（TypeScript 7.0.2） | 0 错 |
+| 前端构建 | `pnpm build`（Vite 8.3.8 / Rolldown） | 通过，约 0.7s；react 162KB、maplibre 1.03MB、antd 1.04MB |
+| 开发服务器 | `pnpm dev --host 127.0.0.1` | Vite 8.3.8 启动，登录页正常 |
+| 生产构建托管 | FastAPI 托管 `dist`，访问 `http://127.0.0.1:8007/` | 登录页与静态资源正常，控制台无 pageerror |
+| 登录后主流程 | 演示账号登录 → 行程列表 → 工作台 → 地图 → 时间线 | 正常；地图画布 400×274；无 pageerror |
+| OpenAPI 类型生成 | `pnpm codegen:api`（隔离 TS 5.9.3） | 成功生成 `src/api/schema.d.ts`，约 140KB |
+
+### 6.2 历史验证记录（2026-11-04）
+
+本次实测（本机，2026-11-04）：
 
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
@@ -129,14 +146,14 @@ Key 通过设置页写入 `app_settings` 表，使用 `SESSION_SECRET` 派生的
 
 ## 7. 遗留项与推进顺序
 
-1. **补齐 Python 依赖清单与锁文件**（当前最高优先级）：仓库没有 `requirements.txt`/`pyproject.toml`/`uv.lock`，无法可重复重建 venv；升级或换机前必须先冻结当前环境。
+1. **Python 依赖已冻结**：`apps/api/requirements.lock.txt`（2026-11-12 `pip freeze`，50 行，含全部传递依赖）。尚未迁移到 `uv.lock`，也未建立 `pyproject.toml`；当前用 lock 文件 + venv 复现。
 2. **P0 剩余**：用项目 Key 逐项实测搜索/地理编码/驾车/步行/公交/天气，把 `verified` 改为 true 并记录 QPS 与允许用途。天地图瓦片已改用 `DataServer` XYZ 接口（`l` 与 MapLibre 级别一一对应），WMTS 矩阵错级与 `{s}` 占位符问题一并消除；出图只差控制台白名单。
 3. **Alembic 基线迁移**：用当前模型生成 `0001_initial`，CI 检查 `alembic check`；`init_db.py` 仅用于本地。
 4. **P2 补全**：输入提示去抖与旧请求取消、双源分组展示、`no-store` 全链路核查、公交城市上下文校验。
 5. **P3 扩展**：真实矩阵预算控制（每任务 400 段上限）、多日分配、冲突诊断文案。
 6. **P4 补全**：附件/图片、GeoPackage 与 Shapefile 预检、COG/DEM 与 TiTiler、PWA 离线攻略、分享页图层。
 7. **发布前**：SMTP 生产联调、HTTPS 与反向代理、备份恢复演练、日志脱敏审计。
-8. **技术栈升级**：按 `UPGRADE_ASSESSMENT.md` 分四步执行，先冻结基线，再升级工具链、UI/React、MapLibre 和后端依赖；当前尚未开始。
+8. **技术栈升级**：第 0 步基线与第 1 步工具链（Vite 8 / plugin-react 6 / TS 7）已完成并验证；下一步 React 19 / Router 7 / AntD 6，然后 MapLibre 6 与后端依赖。详见 `UPGRADE_ASSESSMENT.md`。
 9. **容器化**：用户已表示可安装 Docker；建议先容器化 PostgreSQL/PostGIS 测试库，再补 API/Web Compose，Redis/RQ 最后加。
 
 ## 8. 对原方案的几点意见

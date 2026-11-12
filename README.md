@@ -2,7 +2,7 @@
 
 本仓库是 `docs/IMPLEMENTATION_PLAN.md` 的**可运行实现**（P0–P1 纵向闭环 + P2/P3/P4 的部分能力），不是页面骨架。当前状态与方案文档的差异、未实现项、外部依赖，见 [docs/DELIVERY.md](docs/DELIVERY.md)。
 
-想快速理解代码结构，先看 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。当前实际版本为 React 18.3.1 / Vite 6.4.5 / TypeScript 5.9.3 / MapLibre 5.24 / Ant Design 5.29；最新稳定版、破坏性变更和推荐升级顺序见 [docs/UPGRADE_ASSESSMENT.md](docs/UPGRADE_ASSESSMENT.md)（截至 2026-11-12 仅完成评估，尚未执行依赖升级）。
+想快速理解代码结构，先看 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。当前实际版本为 React 18.3.1 / Vite 8.3.8 / TypeScript 7.0.2 / MapLibre 5.24 / Ant Design 5.29；2026-11-12 已完成工具链升级（Vite 8、plugin-react 6、TypeScript 7），React 19 / AntD 6 / Router 7 / MapLibre 6 / 后端依赖尚未升级。版本对比、破坏性变更和后续顺序见 [docs/UPGRADE_ASSESSMENT.md](docs/UPGRADE_ASSESSMENT.md)。
 
 ## 现在能做什么
 
@@ -35,7 +35,7 @@ travel-planner/
 
 ## 快速开始
 
-前置：Node 22、pnpm 11、Python 3.13、PostgreSQL 17 + PostGIS 3。当前开发方式不依赖 Docker；Docker Compose 尚未落地，容器化计划见 [docs/UPGRADE_ASSESSMENT.md](docs/UPGRADE_ASSESSMENT.md)。
+前置：Node 22.12+（当前 22.18.0）、pnpm 11、Python 3.13、PostgreSQL 17 + PostGIS 3。当前开发方式不依赖 Docker；Docker Compose 尚未落地，容器化计划见 [docs/UPGRADE_ASSESSMENT.md](docs/UPGRADE_ASSESSMENT.md)。
 
 1. 写后端配置 `apps/api/.env`（已生成，只需改一行密码）：
 
@@ -52,6 +52,12 @@ PUBLIC_BASE_URL=http://localhost:5177
 ```bat
 apps\api\.venv\Scripts\python.exe scripts\init_db.py
 apps\api\.venv\Scripts\python.exe scripts\seed_demo.py   rem 可选：南昌三日示例
+```
+
+Python 依赖基线已冻结在 `apps/api/requirements.lock.txt`（含全部传递依赖，2026-11-12 由 `pip freeze` 生成）。换机或重建 venv 时可用：
+
+```bat
+apps\api\.venv\Scripts\python.exe -m pip install -r apps\api\requirements.lock.txt
 ```
 
 3. 启动后端与前端：
@@ -102,12 +108,17 @@ set TEST_DATABASE_URL=postgresql+psycopg://postgres:密码@127.0.0.1:5432/travel
 apps\api\.venv\Scripts\python.exe -m pytest tests -q
 
 # 前端类型与构建
-cd apps/web && npx tsc --noEmit && pnpm build
+cd apps/web && pnpm typecheck && pnpm build
+
+# 依赖 peer 一致性（升级依赖后执行）
+cd apps/web && pnpm peers check
 
 # 接口类型重新生成（后端模型变更后执行）
 apps\api\.venv\Scripts\python.exe scripts/gen_openapi.py
-cd apps/web && npx openapi-typescript openapi.json -o src/api/schema.d.ts
+cd apps/web && pnpm codegen:api
 ```
+
+> `pnpm codegen:api` 通过 `pnpm dlx` 临时使用 TypeScript 5.9.3 + openapi-typescript 7.13.0。openapi-typescript 目前仍调用 TS 5 的 `ts.factory`，在项目使用的 TypeScript 7 下会崩溃；隔离运行可以同时保留 TS 7 类型检查和 OpenAPI 类型生成。
 
 ## 外部依赖与未完成项
 

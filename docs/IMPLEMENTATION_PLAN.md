@@ -81,7 +81,7 @@ Electron 在 Web 首版验收后单独实施。Web 首版的服务端批量 GIS 
 
 P0 使用 React 19 稳定系列、Python 3.12、PostgreSQL 17、兼容 PostGIS 3、Node.js 24 LTS 作为初始兼容候选；核对 GIS 容器、GDAL、RQ 与平台后锁定准确版本。第三方库用稳定发行版，不盲目升级大版本。记录实际运行组合，生成锁文件并固定容器标签/摘要。
 
-**实际落地版本（2026-11-12）与本文的差异**：前端实际为 React 18.3.1、Vite 6.4.5、TypeScript 5.9.3、MapLibre 5.24、Ant Design 5.29；后端为 Python 3.13.14、FastAPI 0.115.6、SQLAlchemy 2.0.36。当前仓库没有 Python 依赖清单/锁文件，也没有 Docker Compose。升级到最新稳定版的评估、破坏性变更和推荐顺序见 [UPGRADE_ASSESSMENT.md](UPGRADE_ASSESSMENT.md)；未执行前不要把本节的目标版本当作已安装版本。
+**实际落地版本（2026-11-12）与本文的差异**：前端实际为 React 18.3.1、Vite 8.3.8、TypeScript 7.0.2、MapLibre 5.24、Ant Design 5.29；后端为 Python 3.13.14、FastAPI 0.115.6、SQLAlchemy 2.0.36。2026-11-12 已完成工具链升级（Vite 8 / plugin-react 6 / TypeScript 7），React 19 / AntD 6 / Router 7 / MapLibre 6 仍待升级。Python 依赖已冻结到 `apps/api/requirements.lock.txt`；仓库仍没有 Docker Compose。升级到最新稳定版的评估、破坏性变更和推荐顺序见 [UPGRADE_ASSESSMENT.md](UPGRADE_ASSESSMENT.md)；未执行前不要把本节的目标版本当作已安装版本。
 
 Windows 开发者通过 Docker Desktop/WSL2 运行 PostgreSQL、Redis、GDAL 和 Worker；前端可在 Windows 运行。Worker 以 Linux 容器作为标准运行环境，避免以 Windows 原生进程行为假设 RQ 的 fork 模型。
 

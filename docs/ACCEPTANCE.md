@@ -1,6 +1,6 @@
 # 验收、测试与阶段完成标准
 
-本清单对应 IMPLEMENTATION_PLAN 和 API_CONTRACT。数值是项目目标，不是已运行测试报告。**当前仓库不是“只有方案文档”**：已实现一条可运行纵向闭环，但本清单中的多数条目仍未逐项验收。实际结构见 [ARCHITECTURE.md](ARCHITECTURE.md)，实现差异与历史验证记录见 [DELIVERY.md](DELIVERY.md)。历史记录（2026-11-04）：`pytest tests -q` 为 29 passed；2026-11-12 本次评估未重新运行测试，未勾选不代表已通过。
+本清单对应 IMPLEMENTATION_PLAN 和 API_CONTRACT。数值是项目目标，不是已运行测试报告。**当前仓库不是“只有方案文档”**：已实现一条可运行纵向闭环，但本清单中的多数条目仍未逐项验收。实际结构见 [ARCHITECTURE.md](ARCHITECTURE.md)，实现差异与验证记录见 [DELIVERY.md](DELIVERY.md)。历史记录（2026-11-04）：`pytest tests -q` 为 29 passed。2026-11-12 工具链升级后复跑：纯逻辑测试 16 passed；全量 `pytest tests -q` 为 16 passed / 16 skipped（未设置 `TEST_DATABASE_URL`）；前端 `pnpm typecheck`、`pnpm build`、`pnpm peers check` 均通过。未勾选不代表已通过。
 
 ## 1. 检查环境与固定数据
 
