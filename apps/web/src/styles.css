@@ -1524,17 +1524,22 @@ html .ant-message .ant-message-notice {
   background: var(--panel-3);
   color: var(--text);
 }
-/* 点击图层标注弹出的点位信息：复用 .map-menu 外观，宽度窄一档 */
-.map-menu-info {
-  width: 268px;
+/* 点击图层标注弹出的点位信息：完全复用 .map-menu 的外观与宽度；缺失值用占位符保持结构 */
+/* 与右键浮层对齐：标题 13px 加粗，正文 14px，按钮 13px */
+.map-menu-info .map-menu-title {
+  font-size: var(--fs-13);
+  font-weight: 700;
 }
 .map-menu-info .map-menu-row b {
   color: var(--text);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--fs-14);
+  font-weight: 400;
   line-height: 1.5;
   overflow-wrap: anywhere;
   text-align: right;
+}
+.map-menu-info .map-menu-close {
+  font-size: var(--fs-13);
 }
 .map-pick-hint .map-menu-close {
   margin-left: 0;
@@ -2604,6 +2609,24 @@ html .ant-message .ant-message-notice {
   font-size: var(--fs-13);
   line-height: 1;
   white-space: nowrap;
+}
+
+/* 与前/后控件拼接的一侧取消圆角，外沿保留圆角，避免单位块左侧出现多余弧线 */
+.num-addon:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.num-addon:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* Space.Compact 6 可能给子项包一层 item，兼容两种 DOM */
+.ant-space-compact-item:first-child > .num-addon {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.ant-space-compact-item:last-child > .num-addon {
+  border-radius: 0 var(--radius) var(--radius) 0;
 }
 
 /* 路线查询结果：耗时单独放大，其余指标分格对齐，不再挤在一句话里 */

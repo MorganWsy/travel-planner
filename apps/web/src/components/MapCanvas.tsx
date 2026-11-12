@@ -5,6 +5,9 @@ import { GLYPH_BY_ID, GLYPH_LIBRARY, defaultGlyphOf, defaultIcon, drawGlyphDot, 
 // MapLibre 6 起只发布 ESM，且不再提供默认导出；统一用命名空间导入
 import * as maplibregl from "maplibre-gl";
 import { LngLatBounds, type Map as MapLibreMap } from "maplibre-gl";
+// MapLibre 的 GeoJSON 解析在 Worker 中进行。Vite 对 `?worker&url` 会产出独立的
+// worker 资源 URL，避免把 520KB worker 源码内联进主 chunk。
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Input } from "antd";
 import HoverTip from "./HoverTip";
 import LayerPanel, { categoryLabelOf } from "./LayerPanel";
@@ -32,6 +35,9 @@ import {
   IconTransport,
   IconViewpoint,
 } from "./icons";
+
+// 必须在地图实例创建前设置；否则 Worker 会退回包内相对路径。
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
 interface Props {
   trip: TripDetail;
@@ -482,17 +488,33 @@ export default function MapCanvas({
       });
       head.append(title, closeBtn);
       box.appendChild(head);
-      // 只展示供应商真实回传的字段（categories/地址/电话/区县/距离/来源），缺失的行直接不显示
-      const rows: Array<[string, string]> = [];
-      const category = categoryLabelOf(String(p.category ?? ""));
-      if (category) rows.push(["类别", category]);
-      if (p.address) rows.push(["地址", String(p.address)]);
-      if (p.tel) rows.push(["电话", String(p.tel)]);
-      if (p.adname) rows.push(["区县", String(p.adname)]);
-      if (p.distance !== undefined && p.distance !== null && p.distance !== "") rows.push(["距离", `${p.distance} 米`]);
-      if (p.provider) rows.push(["来源", String(p.provider) === "amap" ? "高德地图" : String(p.provider)]);
-      rows.push(["经度", Number(p.lon).toFixed(5)]);
-      rows.push(["纬度", Number(p.lat).toFixed(5)]);
+      // 展示所有入库字段（名称在标题里），不展示距采集点距离；经纬度固定放最后。
+      // 缺失字段也保留行，用占位符保证信息结构稳定，便于核对数据完整性。
+      const textOf = (value: unknown): string => {
+        if (value === null || value === undefined) return "—";
+        const text = String(value).trim();
+        return text || "—";
+      };
+      const coordText = (value: unknown): string => {
+        const number = Number(value);
+        return Number.isFinite(number) ? number.toFixed(5) : "—";
+      };
+      const providerText = (value: unknown): string => {
+        const provider = String(value ?? "");
+        if (provider === "amap") return "高德地图";
+        if (provider === "tianditu") return "天地图";
+        if (provider === "manual") return "手工";
+        return textOf(provider);
+      };
+      const rows: Array<[string, string]> = [
+        ["类别", textOf(categoryLabelOf(String(p.category ?? "")) || p.category)],
+        ["地址", textOf(p.address)],
+        ["区县", textOf(p.adname)],
+        ["电话", textOf(p.tel)],
+        ["来源", providerText(p.provider)],
+        ["经度", coordText(p.lon)],
+        ["纬度", coordText(p.lat)],
+      ];
       for (const [key, value] of rows) {
         const row = document.createElement("div");
         row.className = "map-menu-row";
@@ -979,8 +1001,10 @@ export default function MapCanvas({
           (existing as maplibregl.GeoJSONSource).setData(data);
         } else {
           map.addSource(id, { type: "geojson", data });
-          map.addLayer(layer);
         }
+        // 上一次绘制可能在 addLayer 处失败，留下 source 但没有 layer；
+        // 这里按 layer.id 补齐，避免重试时只 setData、图层永远不出现
+        if (!map.getLayer(layer.id)) map.addLayer(layer);
       };
 
       const dashArray = dashArrayOf(lineDash);
@@ -1190,13 +1214,27 @@ export default function MapCanvas({
       }
     };
 
-    drawRef.current = draw;
-    try {
-      draw();
-    } catch {
-      // 样式或 sprite 尚未就绪。这里不能等 style.load：它只在样式重建时触发一次，
-      // 错过就再也不来，标注会一直空到用户下次切底图。styledata 每次样式数据变化都触发。
-      map.once("styledata", draw);
+    // 样式未就绪时不要静默吞异常：MapLibre 6 的 styledata 可能早于样式完全可用，
+    // 这里等 isStyleLoaded() 为真再绘制，失败时保留 styledata/load 重试。
+    const safeDraw = () => {
+      if (!map.isStyleLoaded()) return false;
+      try {
+        draw();
+        return true;
+      } catch (error) {
+        console.error("MapLibre draw failed", error);
+        return false;
+      }
+    };
+    drawRef.current = () => {
+      safeDraw();
+    };
+    if (!safeDraw()) {
+      const retry = () => {
+        if (safeDraw()) map.off("styledata", retry);
+      };
+      map.on("styledata", retry);
+      map.once("load", retry);
     }
   }, [trip, selectedStopId, selectedPlaceId, placeStops, dark, basemapId, annoOn, measurePoints, project, lineColor, lineDash, lineVisible, lineWidth, displayRoutes, layers]);
 
